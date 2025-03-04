@@ -1,5 +1,5 @@
 /**
- * JavaScript Runtime Engine for executing LLM code
+ * JavaScript Runtime Engine for executing tools for Baby Jarvis
  */
 
 // Simple in-memory tools database
@@ -7,164 +7,162 @@ const toolsDb = {};
 
 /**
  * Run JavaScript code
- * @param {string} code - The code to execute
+ * @param {string} code - The code to execute as an arrow function
  * @returns {Promise<any>} The result of execution
  */
-function runJs(code) {
-  // Context shared across all executions
-  const context = {
-    getTool,
-    log,
-    sql
-  }
-  // Execute the code as an arrow function with context
-  return getFunction(code)(context);
-}
-
-/**
- * Get function helper
- * @param {string} code - The code to get the function from
- * @returns {Function} The function
- */
-function getFunction(code) {
-  // Recover the function from the code
-  return Function(`return ${code}`)();
-}
-
-/**
- * Get tool helper
- * @param {string} name - The name of the tool to get
- * @returns {Function} The tool function
- */
-async function getTool(name) {
-  const tool = toolsDb[name];
-  if (!tool) throw new Error(`Tool "${name}" not found`);
-  // Return the function
-  return tool;
-}
-
-/**
- * Logging with real-time display
- * @param {...any} args - The arguments to log
- */
-function log(...args) {
-  const message = args.join(' ');
-  // Display to user in real-time
-  console.log(...args);
-  
-  // Also append to chat UI
-  const chatContainer = document.getElementById('chat-container');
-  const logElement = document.createElement('div');
-  logElement.className = 'log-message';
-  logElement.textContent = message;
-  chatContainer.appendChild(logElement);
-  
-  return message;
-}
-
-/**
- * Database interface (mock implementation)
- * @param {string} query - The SQL query template strings
- * @param {any[]} params - The parameters for the query
- * @returns {Promise<any[]>} The result of the query
- */
-async function sql(strings, ...values) {
-  // This is just a mock implementation
-  // In a real app, this would connect to IndexedDB
-  console.log('SQL Query:', strings.join('?'), 'Values:', values);
-  return [];
-}
-
-/**
- * Parses LLM responses to extract run-js code blocks
- * @param {string} llmResponse - The full response from the LLM
- * @returns {Object} Parsed response with code blocks and modified message
- */
-function parseLLMResponse(llmResponse) {
-  // Look for run-js code blocks
-  const codeBlockRegex = /```run-js\s*([\s\S]*?)\s*```/g;
-  const matches = [...llmResponse.matchAll(codeBlockRegex)];
-  
-  // Extract all code blocks
-  const codeBlocks = matches.map(match => match[1].trim());
-  
-  // Replace code blocks with placeholders for later
-  let cleanMessage = llmResponse;
-  matches.forEach((match, index) => {
-    cleanMessage = cleanMessage.replace(match[0], `[CODE_EXECUTION_${index}]`);
-  });
-  
-  return {
-    message: cleanMessage,
-    codeBlocks
-  };
-}
-
-/**
- * Execute all code blocks in an LLM response and replace placeholders with results
- * @param {string} llmResponse - The full response from the LLM
- * @returns {Promise<string>} - The response with executed code blocks
- */
-async function executeCodeInResponse(llmResponse) {
-  const { message, codeBlocks } = parseLLMResponse(llmResponse);
-  
-  if (codeBlocks.length === 0) {
-    return llmResponse;
-  }
-  
-  let processedMessage = message;
-  
-  for (let i = 0; i < codeBlocks.length; i++) {
+async function runJs(code) {
+  try {
+    console.log('Executing JavaScript code:', code);
+    
+    // Create context object with helper functions
+    const context = {
+      getTool: (name) => {
+        console.log(`Getting tool: ${name}`);
+        // Return a function that will call the tool when invoked
+        return async (...args) => {
+          console.log(`Executing tool ${name} with args:`, args);
+          return await executeTool(name, args.length === 1 ? args[0] : args);
+        };
+      },
+      log,
+      sql: async (query, params) => {
+        console.log('SQL query:', query, params);
+        return []; // Mock implementation
+      }
+    };
+    
+    // Evaluate code as arrow function that receives context
+    let fn;
     try {
-      const result = await runJs(codeBlocks[i]);
-      const resultStr = JSON.stringify(result, null, 2);
-      processedMessage = processedMessage.replace(
-        `[CODE_EXECUTION_${i}]`,
-        `\`\`\`run-js\n${codeBlocks[i]}\n\`\`\`\n\nResult:\n\`\`\`json\n${resultStr}\n\`\`\``
-      );
+      fn = Function(`return ${code}`)();
+      
+      if (typeof fn !== 'function') {
+        throw new Error('Code must evaluate to a function');
+      }
+      
+      const result = await Promise.resolve(fn(context));
+      return { result };
     } catch (error) {
-      processedMessage = processedMessage.replace(
-        `[CODE_EXECUTION_${i}]`,
-        `\`\`\`run-js\n${codeBlocks[i]}\n\`\`\`\n\nError:\n\`\`\`\n${error.message}\n\`\`\``
-      );
+      console.error('JavaScript execution error:', error);
+      throw error;
     }
+  } catch (error) {
+    console.error('JavaScript execution error:', error);
+    throw error;
   }
-  
-  return processedMessage;
 }
 
-// Initialize with built-in tools
-function initializeTools() {
-  // Tool for creating new tools
-  toolsDb['createTool'] = function(name, description, implementation) {
+/**
+ * Create a new tool
+ * @param {string} name - The name of the tool
+ * @param {string} description - The description of the tool
+ * @param {Function} implementation - The function implementation for the tool
+ * @returns {Promise<object>} Result of tool creation
+ */
+async function createTool(name, description, implementation) {
+  try {
     console.log(`Creating new tool: ${name}`);
     console.log(`Description: ${description}`);
     
+    // Check if tool already exists
     if (toolsDb[name]) {
       console.warn(`Tool ${name} already exists and will be overwritten`);
     }
     
-    toolsDb[name] = implementation;
-    return { success: true, name, description };
-  };
+    // Validate that implementation is a function
+    if (typeof implementation !== 'function') {
+      throw new Error('Tool implementation must be a function');
+    }
+    
+    // Store the tool
+    toolsDb[name] = {
+      name,
+      description,
+      implementation
+    };
+    
+    return { 
+      success: true, 
+      name, 
+      description
+    };
+  } catch (error) {
+    console.error('Error creating tool:', error);
+    throw error;
+  }
+}
+
+/**
+ * List all available tools
+ * @returns {Promise<object[]>} Array of tool info objects
+ */
+async function listTools() {
+  return Object.keys(toolsDb).map(name => ({
+    name,
+    description: toolsDb[name].description
+  }));
+}
+
+/**
+ * Execute a custom tool
+ * @param {string} name - The name of the tool to execute
+ * @param {any} input - The input for the tool
+ * @returns {Promise<any>} Result of the tool execution
+ */
+async function executeTool(name, input) {
+  if (!toolsDb[name]) {
+    throw new Error(`Tool "${name}" not found`);
+  }
   
-  // Tool for listing available tools
-  toolsDb['listTools'] = function() {
-    return Object.keys(toolsDb).map(toolName => ({
-      name: toolName
-    }));
-  };
+  try {
+    return await toolsDb[name].implementation(input);
+  } catch (error) {
+    console.error(`Error executing tool ${name}:`, error);
+    throw error;
+  }
+}
+
+// Initialize with built-in tools
+function initializeTools() {
+  // Example built-in tool
+  createTool(
+    'echo',
+    'Echoes back the input provided',
+    (message) => {
+      return message || "No message provided";
+    }
+  );
 }
 
 // Initialize tools when the script loads
 initializeTools();
 
+// Log function for tools to use
+function log(...args) {
+  const message = args.join(' ');
+  console.log(...args);
+  
+  // Add to chat UI if available
+  try {
+    const chatContainer = document.getElementById('chat-container');
+    if (chatContainer) {
+      const logElement = document.createElement('div');
+      logElement.className = 'log-message';
+      logElement.textContent = message;
+      chatContainer.appendChild(logElement);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+  } catch (e) {
+    console.error('Error displaying log in UI:', e);
+  }
+  
+  return message;
+}
+
 export { 
   runJs, 
-  getFunction, 
-  getTool, 
-  log, 
-  sql, 
-  parseLLMResponse, 
-  executeCodeInResponse 
+  createTool, 
+  listTools, 
+  executeTool,
+  log
 };

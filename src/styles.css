@@ -91,40 +91,69 @@ pre {
     margin: 10px 0;
 }
 
-.run-js-block {
-    background-color: #282c34;
-    color: #abb2bf;
-}
-
-.code-result {
-    background-color: #eaf7ea;
-    border-left: 3px solid #52c41a;
-    padding: 8px;
-    border-radius: 0 5px 5px 0;
+.tool-use {
+    background-color: #f0f8ff;
+    border: 1px solid #d9e8f7;
+    border-radius: 5px;
     margin: 10px 0;
-    font-family: monospace;
-    white-space: pre-wrap;
-}
-
-.code-error {
-    background-color: #fff1f0;
-    border-left: 3px solid #f5222d;
     padding: 8px;
-    border-radius: 0 5px 5px 0;
-    margin: 10px 0;
     font-family: monospace;
-    white-space: pre-wrap;
 }
 
-.code-execution {
+.tool-header {
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.tool-name {
+    color: #1890ff;
+    font-family: monospace;
+}
+
+.tool-params {
+    padding: 6px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    background-color: #f5f5f5;
+    border-left: 3px solid #722ed1;
+    white-space: pre-wrap;
+    font-family: monospace;
+    font-size: 13px;
+    overflow-x: auto;
+}
+
+.tool-loading {
+    padding: 8px;
+    margin-top: 5px;
     background-color: #f5f5f5;
     border-left: 3px solid #1890ff;
-    padding: 8px;
-    border-radius: 0 5px 5px 0;
-    margin: 10px 0;
-    font-family: monospace;
-    white-space: pre-wrap;
     animation: pulse 1.5s infinite;
+    white-space: pre-wrap;
+}
+
+.tool-result {
+    padding: 8px;
+    margin-top: 5px;
+    background-color: #eaf7ea;
+    border-left: 3px solid #52c41a;
+    white-space: pre-wrap;
+    font-family: monospace;
+    font-size: 14px;
+    overflow-x: auto;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.tool-error {
+    padding: 8px;
+    margin-top: 5px;
+    background-color: #fff1f0;
+    border-left: 3px solid #f5222d;
+    white-space: pre-wrap;
+    font-family: monospace;
+    font-size: 14px;
+    overflow-x: auto;
 }
 
 @keyframes pulse {

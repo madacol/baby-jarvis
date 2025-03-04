@@ -1,17 +1,15 @@
 /**
- * API client for connecting to Anthropic's Claude API
+ * API client for connecting to Anthropic's Claude API with Tools support
  */
+
+import { runJs, createTool, listTools, executeTool } from './runtime.js';
 
 // API configuration
 const API_CONFIG = {
   baseUrl: 'https://api.anthropic.com/v1/messages',
-  model: 'claude-3-haiku-20240307',
+  model: 'claude-3-5-haiku-latest',
   maxTokens: 4000
 };
-
-// Constants for code block detection
-const CODE_BLOCK_START = '```run-js';
-const CODE_BLOCK_END = '```';
 
 /**
  * Store API key in localStorage
@@ -32,15 +30,17 @@ function getApiKey() {
 }
 
 /**
- * Send a message to Claude and get a streaming response with code execution
+ * Send a message to Claude and get a streaming response with tool execution
  * @param {string} userMessage - The user's message to send
  * @param {Array} history - Previous messages for context
- * @param {Function} onToken - Callback for each token received
- * @param {Function} onCodeBlock - Callback when a complete code block is received
- * @param {Function} onCodeExecution - Callback after code execution
- * @returns {Promise<{response: string, controller: AbortController}>} - Claude's complete response and the controller
+ * @param {Function} onTextUpdate - Callback for text updates
+ * @param {Function} onToolStart - Callback when a tool use is started
+ * @param {Function} onToolUpdate - Callback to update tool input and results
+ * @returns {Promise<object>} - Claude's complete response object
  */
-async function sendMessage(userMessage, history = [], onToken, onCodeBlock, onCodeExecution) {
+async function sendMessage(userMessage, history = [], onTextUpdate, onToolStart, onToolUpdate) {
+  // Create a shared reference to history for all closures to use
+  const messageHistory = history;
   const apiKey = getApiKey();
   
   if (!apiKey) {
@@ -53,51 +53,123 @@ async function sendMessage(userMessage, history = [], onToken, onCodeBlock, onCo
   
   try {
     // Convert history to Anthropic's format
-    const messages = [...history, { role: 'user', content: userMessage }];
+    const messages = [];
+    let pendingToolUse = null;
     
-    const systemPrompt = `You are an AI assistant with the ability to execute JavaScript code using \`\`\`run-js code blocks.
-This allows you to help users by executing functions and tools.
-
-Available Tools:
-- createTool: Create a new tool, but ONLY when the user explicitly asks to create a tool
-- listTools: List all available tools
-
-Code Execution Rules:
-1. ALL \`\`\`run-js code blocks MUST be written as arrow functions that receive a context parameter
-2. Access all tools ONLY through context.getTool() - never access tools directly
-3. Always handle errors appropriately
-
-Example code block (CORRECT):
-
-    \`\`\`run-js
-    ({getTool, log}) => {
-        return getTool('listTools')();
+    for (let i = 0; i < messageHistory.length; i++) {
+      const msg = messageHistory[i];
+      
+      // If we have a pending tool_use and this isn't a tool_result, we need to skip
+      // the pending tool_use message since it doesn't have a matching result
+      if (pendingToolUse && (!msg.content || msg.content[0]?.type !== 'tool_result')) {
+        pendingToolUse = null;
+        continue;
+      }
+      
+      if (msg.role === 'assistant' && Array.isArray(msg.content)) {
+        // Check if this message contains a tool_use
+        const toolUseBlock = msg.content.find(block => block.type === 'tool_use');
+        if (toolUseBlock) {
+          pendingToolUse = msg;
+        }
+      }
+      
+      if (msg.role === 'user' && Array.isArray(msg.content) && 
+          msg.content[0]?.type === 'tool_result' && pendingToolUse) {
+        // Add both the tool_use message and its result
+        messages.push(pendingToolUse);
+        messages.push(msg);
+        pendingToolUse = null;
+      } else if (!pendingToolUse) {
+        // Add normal messages that aren't part of a tool interaction
+        messages.push(msg);
+      }
     }
-    \`\`\`
-
-Example code block (INCORRECT - never do this):
-
-    \`\`\`run-js
-    ({createTool}) => {
-        return createTool('name', 'description', () => {});
+    
+    // If there's still a pending tool_use at the end, don't include it
+    if (pendingToolUse) {
+      pendingToolUse = null;
     }
-    \`\`\`
+    
+    // Add the current user message
+    messages.push({ role: 'user', content: userMessage });
+    
+    // Define the system prompt
+    const systemPrompt = `You are Baby Jarvis, a helpful AI assistant that can use tools to accomplish tasks.
+You can create and use JavaScript tools to help users solve problems.
 
-Important guidelines:
-1. Only use \`\`\`run-js blocks when code execution is necessary
-2. ONLY create tools when the user explicitly asks to create a tool
-3. Always validate inputs before using them
-4. Handle errors gracefully and inform the user if something goes wrong
-5. Always access tools through context.getTool() - never access them directly
-6. Always write code blocks as arrow functions
-7. After a code block executes, refer to its results in your subsequent response`;
+IMPORTANT: 
+1. When writing JavaScript code, you MUST always use arrow functions that receive a context parameter.
+2. Access helper functions through the context parameter, such as:
+   - context.getTool: Access other tools
+   - context.log: Log messages 
+   - context.sql: Execute database queries
 
+Example of correct code:
+({getTool, log}) => {
+  log('Starting task...');
+  return getTool('someFunction')('parameter');
+}
+
+This format is strictly required for all JavaScript code execution.`;
+    
+    // Define available tools
+    const tools = [
+      {
+        name: "runJavaScript",
+        description: "Execute arbitrary JavaScript code and return the result. Code must be an arrow function that receives a context object.",
+        input_schema: {
+          type: "object",
+          properties: {
+            code: {
+              type: "string",
+              description: "The JavaScript code to execute. Must be an arrow function that accepts a context object with helpers like getTool, log, and sql. Example: '({getTool, log}) => { return getTool(\"echo\")(\"hello\"); }'"
+            }
+          },
+          required: ["code"]
+        }
+      },
+      {
+        name: "createTool",
+        description: "Create a new JavaScript tool that can be used later. Only use this when explicitly asked to create a tool.",
+        input_schema: {
+          type: "object",
+          properties: {
+            name: {
+              type: "string",
+              description: "The name of the tool to create. Should be camelCase."
+            },
+            description: {
+              type: "string",
+              description: "A description of what the tool does and when to use it."
+            },
+            functionCode: {
+              type: "string",
+              description: "The JavaScript function code for this tool. Must be an arrow function. Example: '(param1, param2) => { return param1 + param2; }'"
+            }
+          },
+          required: ["name", "description", "functionCode"]
+        }
+      },
+      {
+        name: "listTools",
+        description: "List all available tools that have been created.",
+        input_schema: {
+          type: "object",
+          properties: {},
+          required: []
+        }
+      }
+    ];
+    
     // Prepare request body
     const requestBody = {
       model: API_CONFIG.model,
       messages: messages,
       max_tokens: API_CONFIG.maxTokens,
       system: systemPrompt,
+      tools: tools,
+      tool_choice: { type: "auto" },  // Changed from "any" to "auto" to allow text before tool use
       stream: true
     };
     
@@ -110,7 +182,8 @@ Important guidelines:
         'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true'
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
+      signal: signal
     });
     
     if (!response.ok) {
@@ -118,11 +191,12 @@ Important guidelines:
       throw new Error(`API error: ${errorData.error?.message || response.statusText}`);
     }
     
-    // Variables to track streaming state
-    let fullResponse = '';
-    let buffer = '';
-    let pendingCodeBlock = null;
-    let inCodeBlock = false;
+    // Variables to track state
+    let currentMessage = { id: '', role: 'assistant', content: [], usage: { input_tokens: 0, output_tokens: 0 } };
+    let currentToolUse = null;
+    let currentTextBlock = null;
+    let currentTextIndex = -1;
+    let currentToolInput = "";  // For accumulating JSON fragments
     
     console.log("Starting streaming process...");
     
@@ -130,15 +204,15 @@ Important guidelines:
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     
-    // Stream processing function
+    // Function to handle SSE events
     async function processStream() {
       // Read from the stream
       const { done, value } = await reader.read();
       
-      // If the stream is done, return the full response
+      // If the stream is done, return the full message
       if (done) {
-        console.log("Streaming complete. Full response:", fullResponse);
-        return fullResponse;
+        console.log("Streaming complete. Full message:", currentMessage);
+        return currentMessage;
       }
       
       // Decode the chunk
@@ -157,103 +231,228 @@ Important guidelines:
             }
             
             const data = JSON.parse(jsonData);
+            console.log("SSE event:", data);
             
-            // Check if there's content
-            if (data.type === 'content_block_delta' && data.delta && data.delta.text) {
-              const token = data.delta.text;
-              console.log("Received token:", token);
-              
-              // Add to the full response
-              fullResponse += token;
-              
-              // Add to the buffer for code block detection
-              buffer += token;
-              
-              // Check for code block start
-              if (!inCodeBlock && buffer.includes(CODE_BLOCK_START)) {
-                inCodeBlock = true;
-                pendingCodeBlock = CODE_BLOCK_START;
+            // Handle event types
+            switch (data.type) {
+              case 'message_start':
+                // Initialize the message
+                currentMessage = data.message;
+                break;
                 
-                // Remove the start marker from the buffer
-                buffer = buffer.substring(buffer.indexOf(CODE_BLOCK_START) + CODE_BLOCK_START.length);
-                console.log("Detected code block start");
-              }
-              
-              // Check for code block end if we're in a code block
-              if (inCodeBlock && buffer.includes(CODE_BLOCK_END)) {
-                // Complete code block found
-                const codeContent = buffer.substring(0, buffer.indexOf(CODE_BLOCK_END));
-                pendingCodeBlock += codeContent + CODE_BLOCK_END;
+              case 'content_block_start':
+                // Handle the start of a content block
+                const block = data.content_block;
                 
-                // Remove the code block from the buffer
-                buffer = buffer.substring(buffer.indexOf(CODE_BLOCK_END) + CODE_BLOCK_END.length);
-                
-                // Extract the actual code (without the markers)
-                const code = codeContent.trim();
-                console.log("Complete code block detected:", code);
-                
-                // Notify about the code block
-                if (onCodeBlock) {
-                  onCodeBlock(code, pendingCodeBlock);
-                }
-                
-                // Terminate this streaming response - we'll create a new one after execution
-                // Close the reader to stop the stream
-                reader.cancel();
-                
-                // Execute the code
-                try {
-                  const result = await runJs(code);
-                  console.log("Code execution result:", result);
+                if (block.type === 'text') {
+                  // Initialize text block
+                  currentTextIndex = data.index;
+                  currentTextBlock = block.text || '';
+                  currentMessage.content[currentTextIndex] = { type: 'text', text: currentTextBlock };
+                } else if (block.type === 'tool_use') {
+                  // Reset tool input accumulator
+                  currentToolInput = '';
                   
-                  // Call execution callback with the result
-                  if (onCodeExecution) {
-                    onCodeExecution({
-                      success: true,
-                      result,
-                      code
-                    });
+                  // Initialize tool use block
+                  currentToolUse = {
+                    id: block.id,
+                    name: block.name,
+                    input: block.input || {}
+                  };
+                  
+                  // Add to message content
+                  currentMessage.content[data.index] = {
+                    type: 'tool_use',
+                    ...currentToolUse
+                  };
+                  
+                  // Notify about tool start
+                  if (onToolStart) {
+                    onToolStart(currentToolUse);
+                  }
+                }
+                break;
+                
+              case 'content_block_delta':
+                // Handle deltas to content blocks
+                if (data.delta.type === 'text_delta') {
+                  // Update text content
+                  currentTextBlock += data.delta.text;
+                  
+                  // Update in message
+                  if (currentMessage.content[data.index]) {
+                    currentMessage.content[data.index].text = currentTextBlock;
                   }
                   
-                  // Add result to message history for context
-                  messages.push({
-                    role: 'user',
-                    content: `The code block executed successfully. Result: ${JSON.stringify(result, null, 2)}`
-                  });
-                  
-                  // Return the current response - we need to start a new request to continue
-                  return fullResponse;
-                } catch (error) {
-                  console.error("Code execution error:", error);
-                  
-                  // Call execution callback with error
-                  if (onCodeExecution) {
-                    onCodeExecution({
-                      success: false,
-                      error: error.message,
-                      code
-                    });
+                  // Call text update callback
+                  if (onTextUpdate) {
+                    onTextUpdate(currentTextBlock, data.index);
+                  }
+                } else if (data.delta.type === 'input_json_delta') {
+                  // Tool input delta - accumulate the partial JSON
+                  if (data.delta.partial_json !== undefined) {
+                    currentToolInput += data.delta.partial_json;
+                    if (onToolUpdate) {
+                      onToolUpdate({
+                        input: currentToolInput
+                      });
+                    }
+
+                    try {
+                      // Try to parse the accumulated JSON
+                      const parsedInput = JSON.parse(currentToolInput);
+                      
+                      // If successful, update the tool use input
+                      if (currentMessage.content[data.index] && currentMessage.content[data.index].type === 'tool_use') {
+                        currentMessage.content[data.index].input = parsedInput;
+                        
+                        // Update current tool use
+                        if (currentToolUse) {
+                          currentToolUse.input = parsedInput;
+                        }
+                      }
+                    } catch (error) {
+                      // Ignore parsing errors until we have the complete JSON
+                      // This is expected since we're receiving partial JSON fragments
+                    }
+                  }
+                }
+                break;
+                
+              case 'content_block_stop':
+                // Handle the end of a content block
+                // Reset tool input accumulator if this was a tool_use block
+                if (currentMessage.content[data.index] && currentMessage.content[data.index].type === 'tool_use') {
+                  // Final chance to parse the JSON
+                  try {
+                    const parsedInput = JSON.parse(currentToolInput);
+                    currentMessage.content[data.index].input = parsedInput;
+                    if (currentToolUse) {
+                      currentToolUse.input = parsedInput;
+                    }
+                  } catch (error) {
+                    console.error('Error parsing tool input JSON:', error);
                   }
                   
-                  // Add error to message history
-                  messages.push({
-                    role: 'user', 
-                    content: `The code block execution failed with error: ${error.message}`
-                  });
-                  
-                  // Return the current response - we need to start a new request to continue
-                  return fullResponse;
+                  // Reset the accumulator for next tool
+                  currentToolInput = "";
                 }
                 
-                // Reset code block tracking
-                inCodeBlock = false;
-                pendingCodeBlock = null;
-              }
-              
-              // Call token callback if provided
-              if (onToken) {
-                onToken(token);
-              }
+                // If this is a tool block that's complete, execute the tool
+                if (currentToolUse && data.index === currentMessage.content.findIndex(c => c.type === 'tool_use')) {
+                  try {
+                    // Get the complete tool input
+                    const toolInput = currentMessage.content[data.index].input;
+                    
+                    // Log the tool and input
+                    console.log(`Executing tool ${currentToolUse.name} with input:`, toolInput);
+                    
+                    // Execute the tool based on name
+                    let result;
+                    if (currentToolUse.name === 'runJavaScript') {
+                      result = await runJs(toolInput.code);
+                    } else if (currentToolUse.name === 'createTool') {
+                      // Make sure we're passing the function implementation correctly
+                      let implementation;
+                      try {
+                        // Parse the function code as an arrow function
+                        implementation = Function(`return ${toolInput.functionCode}`)();
+                        if (typeof implementation !== 'function') {
+                          throw new Error('Tool implementation must be a function');
+                        }
+                      } catch (error) {
+                        throw new Error(`Invalid function code: ${error.message}`);
+                      }
+                      
+                      result = await createTool(toolInput.name, toolInput.description, implementation);
+                    } else if (currentToolUse.name === 'listTools') {
+                      result = await listTools();
+                    } else {
+                      // Try to execute a custom tool
+                      result = await executeTool(currentToolUse.name, toolInput);
+                    }
+                    
+                    // Call tool update callback with success
+                    if (onToolUpdate) {
+                      onToolUpdate({
+                        success: true,
+                        result
+                      });
+                    }
+                    
+                    // Add tool result to the message history for context
+                    const toolResultMessage = {
+                      role: 'user',
+                      content: [
+                        {
+                          type: 'tool_result',
+                          tool_use_id: currentToolUse.id,
+                          content: JSON.stringify(result)
+                        }
+                      ]
+                    };
+                    
+                    // Don't modify the messageHistory here - we'll just return the results
+                    // The app.js file will handle updating the message history appropriately
+                    
+                    // However, we need to add to the messages array for context within this API call
+                    messages.push(toolResultMessage);
+                    
+                    // We need to continue processing the existing response
+                    // Don't make additional API calls here - the streaming continues after tool execution
+                    
+                    // Instead, just process the tool result locally and let the stream continue
+                    console.log("Tool execution complete, continuing with stream processing", result);
+                    
+                    // Reset current tool use
+                    currentToolUse = null;
+                  } catch (error) {
+                    console.error(`Error executing tool ${currentToolUse.name}:`, error);
+                    
+                    // Call tool update callback with error
+                    if (onToolUpdate) {
+                      onToolUpdate({
+                        success: false,
+                        error: error.message
+                      });
+                    }
+                    
+                    // Add error to message history
+                    const errorToolResult = {
+                      role: 'user',
+                      content: [
+                        {
+                          type: 'tool_result',
+                          tool_use_id: currentToolUse.id,
+                          content: JSON.stringify({ error: error.message })
+                        }
+                      ]
+                    };
+                    
+                    // Add to messages array for context in the current API call
+                    messages.push(errorToolResult);
+                    
+                    // Also add to messageHistory for context in subsequent API calls
+                    messageHistory.push(errorToolResult);
+                    
+                    // Reset current tool use
+                    currentToolUse = null;
+                  }
+                }
+                break;
+                
+              case 'message_delta':
+                // Update message with delta information
+                if (data.delta.stop_reason) {
+                  currentMessage.stop_reason = data.delta.stop_reason;
+                }
+                if (data.delta.stop_sequence) {
+                  currentMessage.stop_sequence = data.delta.stop_sequence;
+                }
+                if (data.usage) {
+                  currentMessage.usage = data.usage;
+                }
+                break;
             }
           }
         }
@@ -272,17 +471,6 @@ Important guidelines:
     console.error('Error calling Claude API:', error);
     throw error;
   }
-}
-
-/**
- * Run JavaScript code from string
- * @param {string} code - Code to execute
- * @returns {Promise<any>} - Execution result
- */
-async function runJs(code) {
-  // Import at runtime to avoid circular dependencies
-  const runtime = await import('./runtime.js');
-  return runtime.runJs(code);
 }
 
 export { saveApiKey, getApiKey, sendMessage };

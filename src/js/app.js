@@ -3,12 +3,6 @@
  */
 
 import { 
-  runJs, 
-  parseLLMResponse, 
-  executeCodeInResponse 
-} from './runtime.js';
-
-import { 
   saveApiKey, 
   getApiKey, 
   sendMessage 
@@ -23,224 +17,242 @@ function addMessageToUI(message, isUser) {
   const messageElement = document.createElement('div');
   messageElement.className = isUser ? 'user-message' : 'ai-message';
   
-  // Process markdown-like formatting for code blocks
-  let formattedMessage = message;
+  // Simple text message
+  if (typeof message === 'string') {
+    messageElement.textContent = message;
+  } 
+  // Message with content array (Anthropic format)
+  else if (message.content && Array.isArray(message.content)) {
+    message.content.forEach(block => {
+      if (block.type === 'text') {
+        const textElement = document.createElement('div');
+        textElement.textContent = block.text;
+        messageElement.appendChild(textElement);
+      }
+    });
+  }
   
-  // Format code blocks that are not run-js blocks
-  formattedMessage = formattedMessage.replace(/```(?!run-js)([\s\S]*?)```/g, (match, code) => {
-    return `<pre><code>${code}</code></pre>`;
-  });
-  
-  // Highlight run-js blocks
-  formattedMessage = formattedMessage.replace(/```run-js([\s\S]*?)```/g, (match, code) => {
-    return `<pre class="run-js-block"><code>${code}</code></pre>`;
-  });
-  
-  messageElement.innerHTML = formattedMessage;
   chatContainer.appendChild(messageElement);
   
   // Scroll to bottom
   chatContainer.scrollTop = chatContainer.scrollHeight;
+  
+  return messageElement;
 }
 
-// Process the AI response including code execution
-async function processAIResponse(response) {
-  try {
-    // Parse and execute code blocks
-    const parsedResponse = parseLLMResponse(response);
+// Update a text block in an existing message element
+function updateTextBlock(messageElement, text, blockIndex) {
+  // Get or create the text block element
+  let textBlockElement;
+  
+  if (blockIndex < messageElement.childElementCount) {
+    textBlockElement = messageElement.children[blockIndex];
+  } else {
+    textBlockElement = document.createElement('div');
+    messageElement.appendChild(textBlockElement);
+  }
+  
+  // Update the text content
+  textBlockElement.textContent = text;
+  
+  // Scroll to bottom
+  const chatContainer = document.getElementById('chat-container');
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+  
+  return textBlockElement;
+}
+
+// Add a tool use element to the UI
+function addToolUseToUI(toolUse) {
+  const chatContainer = document.getElementById('chat-container');
+  
+  // Display parameters for the tool
+  
+  // Create tool use element
+  const toolElement = document.createElement('div');
+  toolElement.className = 'tool-use';
+  toolElement.innerHTML = /*html*/`
+    <div class="tool-header">Using tool: <span class="tool-name">${toolUse.name}</span></div>
+    <div class="tool-params">Parameters: ...</div>
+    <div class="tool-loading">Executing...</div>
+  `;
+  
+  // Add to chat
+  chatContainer.appendChild(toolElement);
+  
+  // Scroll to bottom
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+  
+  return toolElement;
+}
+
+// Update a tool element with results
+function updateToolWithResult(toolElement, result, success) {
+  // Find the loading element
+  const loadingElement = toolElement.querySelector('.tool-loading');
+  
+  // Replace with result
+  if (loadingElement) {
+    loadingElement.className = success ? 'tool-result' : 'tool-error';
     
-    // If there are code blocks, execute them
-    if (parsedResponse.codeBlocks.length > 0) {
-      // First display the response without executed code
-      addMessageToUI(response, false);
-      
-      // Execute each code block
-      for (let i = 0; i < parsedResponse.codeBlocks.length; i++) {
-        try {
-          const codeBlock = parsedResponse.codeBlocks[i];
-          console.log(`Executing code block ${i + 1}:`, codeBlock);
+    // Format the result appropriately
+    let displayText = '';
+    
+    if (success) {
+      // Special handling for runJavaScript results
+      if (result && typeof result === 'object') {
+        // Check if it has a result property (from our runJs function)
+        if (result.result !== undefined) {
+          // Show the result
+          displayText = `Result: ${JSON.stringify(result.result, null, 2)}`;
+        } else if (result.logs && Array.isArray(result.logs) && result.logs.length > 0) {
+          // Show logs as primary output
+          displayText = `Output:\n${result.logs.join('\n')}`;
           
-          // Execute the code
-          const result = await runJs(codeBlock);
-          console.log(`Code block ${i + 1} result:`, result);
-          
-          // Display the result
-          const resultElement = document.createElement('div');
-          resultElement.className = 'code-result';
-          resultElement.textContent = `Result: ${JSON.stringify(result, null, 2)}`;
-          document.getElementById('chat-container').appendChild(resultElement);
-        } catch (error) {
-          console.error(`Error executing code block ${i + 1}:`, error);
-          
-          // Display the error
-          const errorElement = document.createElement('div');
-          errorElement.className = 'code-error';
-          errorElement.textContent = `Error: ${error.message}`;
-          document.getElementById('chat-container').appendChild(errorElement);
+          // Add result only if it's not undefined
+          if (result.result !== undefined) {
+            displayText += `\n\nReturn value: ${JSON.stringify(result.result, null, 2)}`;
+          }
+        } else {
+          // Normal object result
+          displayText = `Result: ${JSON.stringify(result, null, 2)}`;
         }
+      } else {
+        // Simple value
+        displayText = `Result: ${result}`;
       }
     } else {
-      // If no code blocks, just display the response
-      addMessageToUI(response, false);
+      // Error case
+      displayText = `Error: ${result.error || 'Unknown error'}`;
     }
-  } catch (error) {
-    console.error('Error processing AI response:', error);
-    addMessageToUI(`Error processing response: ${error.message}`, false);
+    
+    loadingElement.textContent = displayText;
+  }
+  
+  // Scroll to bottom
+  const chatContainer = document.getElementById('chat-container');
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+// Update the tool params display with new input
+function updateToolParams(toolElement, input) {
+  const paramsElement = toolElement.querySelector('.tool-params');
+  if (paramsElement) {
+    try {
+      // Try to parse and format the input JSON
+      const formatted = JSON.stringify(JSON.parse(input), null, 2);
+      paramsElement.textContent = `Parameters: ${formatted}`;
+    } catch (e) {
+      // If we can't parse it yet, show the raw input
+      paramsElement.textContent = `Parameters: ${input}`;
+    }
   }
 }
 
 // Send a message to the AI with streaming response
-async function sendMessageToAI(message, continueFromResponse = null) {
+async function sendMessageToAI(message) {
   try {
-    // Only add user message to UI if this is a new conversation, not a continuation
-    if (!continueFromResponse) {
-      addMessageToUI(message, true);
-      
-      // Add to history
-      messageHistory.push({
-        role: 'user',
-        content: message
-      });
-    }
+    // Add user message to UI
+    addMessageToUI(message, true);
     
-    // Get or create the AI message element
+    // Add to history
+    messageHistory.push({
+      role: 'user',
+      content: message
+    });
+    
+    // Create message element for AI response
     const chatContainer = document.getElementById('chat-container');
-    let aiMessageElement;
+    const aiMessageElement = document.createElement('div');
+    aiMessageElement.className = 'ai-message';
+    chatContainer.appendChild(aiMessageElement);
     
-    if (continueFromResponse) {
-      // Find the last AI message element
-      const aiMessages = document.querySelectorAll('.ai-message');
-      aiMessageElement = aiMessages[aiMessages.length - 1];
-    } else {
-      // Create a new AI message element
-      aiMessageElement = document.createElement('div');
-      aiMessageElement.className = 'ai-message';
-      chatContainer.appendChild(aiMessageElement);
-    }
-    
-    // Create separate elements for code blocks and results
-    let currentCodeBlockElement = null;
-    let currentCodeResultElement = null;
-    
-    // Current text buffer - initialize from previous response if continuing
-    let currentText = continueFromResponse || '';
-    
-    // If continuing, restore the formatted content
-    if (continueFromResponse) {
-      aiMessageElement.innerHTML = formatMessage(currentText);
-    }
+    // Variables to track current state
+    let currentToolElement = null;
     
     // Callbacks for streaming
-    const onToken = (token) => {
-      // Append the token to the current text
-      currentText += token;
-      
-      // Update the message element with formatted text
-      aiMessageElement.innerHTML = formatMessage(currentText);
-      
-      // Scroll to bottom
-      chatContainer.scrollTop = chatContainer.scrollHeight;
+    const onTextUpdate = (text, blockIndex) => {
+      // Update the text in the AI message element
+      updateTextBlock(aiMessageElement, text, blockIndex);
     };
     
-    const onCodeBlock = (code, fullBlock) => {
-      console.log('Complete code block received:', code);
-      console.log('Full block:', fullBlock);
+    const onToolStart = (toolUse) => {
+      console.log('Tool use started:', toolUse);
       
-      // Check if this is a properly formatted arrow function
-      if (!code.includes('=>')) {
-        console.warn('Code block is not a proper arrow function, this may fail to execute');
-      }
-      
-      // Find the run-js code block in the AI message and insert the result after it
-      const codeBlocks = aiMessageElement.querySelectorAll('pre.run-js-block');
-      let targetCodeBlock = null;
-      
-      // Find the code block that contains this code
-      for (const block of codeBlocks) {
-        if (block.textContent.includes(code)) {
-          targetCodeBlock = block;
-          break;
-        }
-      }
-      
-      // Create the results element
-      currentCodeResultElement = document.createElement('div');
-      currentCodeResultElement.className = 'code-execution';
-      currentCodeResultElement.textContent = 'Executing code...';
-      
-      if (targetCodeBlock) {
-        // Insert the results directly after the code block
-        targetCodeBlock.after(currentCodeResultElement);
-      } else {
-        // Fallback: append to chat container
-        chatContainer.appendChild(currentCodeResultElement);
-      }
-      
-      // Scroll to bottom
-      chatContainer.scrollTop = chatContainer.scrollHeight;
+      // Create a tool use element
+      currentToolElement = addToolUseToUI(toolUse);
     };
     
-    const onCodeExecution = (executionData) => {
-      if (!currentCodeResultElement) return;
+    const onToolUpdate = (update) => {
+      console.log('Tool update:', update);
       
-      if (executionData.success) {
-        // Update the result element with success
-        currentCodeResultElement.className = 'code-result';
-        currentCodeResultElement.textContent = `Result: ${JSON.stringify(executionData.result, null, 2)}`;
-      } else {
-        // Update the result element with error
-        currentCodeResultElement.className = 'code-error';
-        currentCodeResultElement.textContent = `Error: ${executionData.error}`;
+      if (!currentToolElement) return;
+
+      // Handle input updates
+      if (update.input !== undefined) {
+        updateToolParams(currentToolElement, update.input);
       }
       
-      // Reset current elements
-      currentCodeBlockElement = null;
-      currentCodeResultElement = null;
-      
-      // Scroll to bottom
-      chatContainer.scrollTop = chatContainer.scrollHeight;
+      // Handle results/errors
+      if (update.success !== undefined) {
+        updateToolWithResult(
+          currentToolElement, 
+          update.success ? update.result : { error: update.error },
+          update.success
+        );
+        
+        // Reset current tool element after completion
+        currentToolElement = null;
+      }
     };
     
     // Get streaming response from API
     const response = await sendMessage(
       message, 
       messageHistory, 
-      onToken, 
-      onCodeBlock, 
-      onCodeExecution
+      onTextUpdate, 
+      onToolStart, 
+      onToolUpdate
     );
     
-    // Add complete response to history
-    messageHistory.push({
-      role: 'assistant',
-      content: response
-    });
+    console.log('Full response:', response);
+    
+    // Add complete response to history with careful handling of tool interactions
+    if (response && response.role === 'assistant') {
+      const assistantMessage = {
+        role: 'assistant',
+        content: response.content
+      };
+      
+      // Check if this message has tool use
+      const hasTool = response.content.some(block => block.type === 'tool_use');
+      
+      // If the last message is also from the assistant, replace it to avoid duplicate messages
+      if (messageHistory.length > 0 && messageHistory[messageHistory.length - 1].role === 'assistant') {
+        messageHistory[messageHistory.length - 1] = assistantMessage;
+      } else {
+        // Otherwise append the new message
+        messageHistory.push(assistantMessage);
+      }
+      
+      // If using a tool, we need a matching tool result
+      if (hasTool) {
+        // Find the tool use ID so we can process this properly in future messages
+        const toolUseId = response.content.find(block => block.type === 'tool_use').id;
+        console.log("Message contains tool_use with ID:", toolUseId);
+      }
+    }
     
     // Limit history length to avoid token limits
-    if (messageHistory.length > 10) {
-      messageHistory = messageHistory.slice(messageHistory.length - 10);
+    if (messageHistory.length > 20) {
+      messageHistory = messageHistory.slice(messageHistory.length - 20);
     }
+    
+    console.log("Updated message history:", messageHistory);
   } catch (error) {
     console.error('Error sending message:', error);
     addMessageToUI(`Error: ${error.message}`, false);
   }
-}
-
-// Format message with code highlighting
-function formatMessage(message) {
-  let formattedMessage = message;
-  
-  // Format code blocks that are not run-js blocks
-  formattedMessage = formattedMessage.replace(/```(?!run-js)([\s\S]*?)```/g, (match, code) => {
-    return `<pre><code>${code}</code></pre>`;
-  });
-  
-  // Highlight run-js blocks
-  formattedMessage = formattedMessage.replace(/```run-js([\s\S]*?)```/g, (match, code) => {
-    return `<pre class="run-js-block"><code>${code}</code></pre>`;
-  });
-  
-  return formattedMessage;
 }
 
 // Save API key button
@@ -277,7 +289,7 @@ document.getElementById('user-input').addEventListener('keypress', (e) => {
 // Check for API key
 const apiKey = getApiKey();
 if (apiKey) {
-  document.getElementById('api-key').value = '••••••••••••••••••••';
+  document.getElementById('api-key').value = '••••••••••••••••••••••••••••••••••••••••';
 }
 
 // Welcome message
