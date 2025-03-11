@@ -40,8 +40,8 @@ async function runJs(code) {
         throw new Error('Code must evaluate to a function');
       }
       
-      const result = await Promise.resolve(fn(context));
-      return { result };
+      const result = fn(context);
+      return result;
     } catch (error) {
       console.error('JavaScript execution error:', error);
       throw error;
@@ -121,21 +121,6 @@ async function executeTool(name, input) {
     throw error;
   }
 }
-
-// Initialize with built-in tools
-function initializeTools() {
-  // Example built-in tool
-  createTool(
-    'echo',
-    'Echoes back the input provided',
-    (message) => {
-      return message || "No message provided";
-    }
-  );
-}
-
-// Initialize tools when the script loads
-initializeTools();
 
 // Log function for tools to use
 function log(...args) {

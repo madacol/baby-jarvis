@@ -162,7 +162,12 @@ pre {
     100% { opacity: 0.6; }
 }
 
-.loading {
-    opacity: 0.7;
-    font-style: italic;
+/* Error message styles */
+.ai-message.error {
+  color: #ff4444;
+  background-color: #fff1f0;
+  border-left: 4px solid #ff4444;
+  padding: 10px;
+  margin: 10px 0;
+  font-family: monospace;
 }
