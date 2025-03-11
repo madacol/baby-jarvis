@@ -7,7 +7,7 @@
  * @property {string} role - The role of the message sender
  * @property {{role: string, content: Array<
  *   {type: 'text', text: string}
- *   | {type: 'tool', id: string, name: string, input: string}
+ *   | {type: 'tool_use', id: string, name: string, input: string}
  *   | {type: 'tool_result', tool_use_id: string, content: (string | Array<import('./app.js').ContentBlock>), is_error?: boolean}
  * >}} content - The content of the message
  */
