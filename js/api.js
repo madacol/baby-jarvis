@@ -36,7 +36,11 @@ function saveApiKey(apiKey) {
  * @returns {string|null} The stored API key
  */
 function getApiKey() {
-  return localStorage.getItem('anthropic_api_key');
+  // API key can be set in URL hash like: #anthropic_api_key=your-key-here
+  // Example: https://.../#anthropic_api_key=sk-ant-api03-...
+  const hashParams = new URLSearchParams(window.location.hash.slice(1));
+  const hashApiKey = hashParams.get('anthropic_api_key');
+  return hashApiKey || localStorage.getItem('anthropic_api_key');
 }
 
 /**
