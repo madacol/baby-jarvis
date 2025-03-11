@@ -444,4 +444,4 @@ if (apiKey) {
 }
 
 // Welcome message
-addMessageToUI('Welcome to Baby Jarvis! I can help you with tasks using JavaScript. I can create new tools on demand too. Try asking me to create a tool or use an existing one.', false);
+addMessageToUI('Welcome to Baby Jarvis! I can help you with tasks by generating JavaScript and running it in your browser.', false);
