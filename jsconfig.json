@@ -3,6 +3,7 @@
         "allowJs": true,
         "checkJs": true,
         "lib": ["ES2022", "DOM"],
-        "forceConsistentCasingInFileNames": true
+        "forceConsistentCasingInFileNames": true,
+        "module": "ES2022"
     }
 }
