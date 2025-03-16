@@ -60,7 +60,7 @@ async function runJs(code) {
 ```javascript
 /**
  * @param {function} setupFunction - A function that will be passed the context object of the Javascript runtime
- * @param {Array<{ name: string, description: string, input_schema: object, functionCode: string }>} tools - An array of tools to be created
+ * @param {Array<{ name: string, description: string, input_schema: {}, functionCode: string }>} tools - An array of tools to be created
  */
 async function createTool(setupFunction, tools) {
     setupFunction(context)
@@ -103,10 +103,10 @@ User: "Create a tool to create and update shopping lists"
 
 Claude:
 ```javascript
-(context) => {
-    context.createApp(
+({createApp}) => {
+    createApp(
         ({log, sql}) => {
-            log('Creating shopping buy-list app');
+            log('Creating shopping-list app');
             // Create a table to store the shopping lists
             sql(`CREATE TABLE shopping_list (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, 
