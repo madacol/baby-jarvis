@@ -119,13 +119,15 @@ async function sendMessage({ messages, systemPrompt, tools, onEvent }) {
       signal: signal
     });
     
-    if (!response.ok) {
+    if (!response?.ok) {
       const errorData = await response.json();
       throw new Error(`API error: ${errorData.error?.message || response.statusText}`);
     }
 
+    if (!response.body) throw new Error('No response body');
+
     console.log("Starting streaming process...");
-    
+
     // Process the stream
     const reader = response.body.getReader();
     const decoder = new TextDecoder();

@@ -315,6 +315,7 @@ async function handleStreamEvent(event) {
       content_blocks.delete(event.index);
 
       const lastMessage = messageHistory.at(-1);
+      if (!lastMessage) throw new Error('No last message found');
       lastMessage.content[event.index] = toolContent;
       
       let parsedInput;
@@ -347,6 +348,7 @@ async function handleStreamEvent(event) {
     }
     case 'content_block_stop': {
       const content_block = content_blocks.get(event.index);
+      if (!content_block) throw new Error('No content block found');
       switch (content_block.type) {
         case 'text':
           await handleStreamEvent({

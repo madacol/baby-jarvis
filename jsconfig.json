@@ -5,5 +5,6 @@
         "lib": ["ES2022", "DOM"],
         "forceConsistentCasingInFileNames": true,
         "module": "ES2022"
+        "strictNullChecks": true
     }
 }
