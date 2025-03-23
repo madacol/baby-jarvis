@@ -2,14 +2,12 @@
  * Main application file for Baby Jarvis
  */
 
+import { getActions } from './actions.js';
 import { 
   saveApiKey, 
   getApiKey, 
   sendMessage 
 } from './api.js';
-import { executeTool, runJs } from './runtime.js';
-
-// Runtime imports moved back to api.js
 
 // Global DOM element references with type annotations
 const chatContainer = /** @type {HTMLDivElement} */ (document.getElementById('chat-container'));
@@ -21,9 +19,9 @@ const saveKeyButton = /** @type {HTMLButtonElement} */ (document.getElementById(
 // Add type definitions at top
 /** 
  * @typedef { { type: 'text', text: string, element?: HTMLDivElement } } TextContentBlock
- * @typedef { { type: 'tool', id: string, name: string, input_string: string, input?: {}, element?: HTMLDivElement } } ToolContentBlock
+ * @typedef { { type: 'tool', id: string, name: string, input_string: string, input?: {}, element: HTMLDivElement } } ToolContentBlock
  * @typedef { { type: 'image', source: { type: 'base64', media_type: string, data: string } } } ImageContentBlock
- * @typedef { { type: 'tool_result', tool_use_id: string, content: (string | Array<ContentBlock>), is_error?: boolean } } ToolResultContentBlock
+ * @typedef { { type: 'tool_result', tool_use_id: string, content: (string | ContentBlock[]), is_error?: boolean } } ToolResultContentBlock
  * @typedef { TextContentBlock | ToolContentBlock | ImageContentBlock | ToolResultContentBlock } ContentBlock
  * @typedef { { type: 'text_start', index: number, content: { text: string } }
  *  | { type: 'text_delta', index: number, content: { text: string } }
@@ -34,9 +32,9 @@ const saveKeyButton = /** @type {HTMLButtonElement} */ (document.getElementById(
  *  | { type: 'content_block_stop', index: number }
  * } StreamingEvent
  * 
- * @typedef { {role: string, content: Array<ContentBlock>} } Message
+ * @typedef { {role: string, content: ContentBlock[]} } Message
  * 
- * @typedef { {name: string, description: string, input_schema: Object} } Tool
+ * @typedef { {name: string, description: string, input_schema: {}} } Tool
  */
 
 /** 
@@ -140,14 +138,18 @@ function updateToolWithResult(toolElement, result, success) {
   chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-// Update the tool params display with new input
+/**
+ * Update the tool params display with new input
+ * @param {HTMLDivElement} toolElement 
+ * @param {string} input 
+ */
 function updateToolParams(toolElement, input) {
   const paramsElement = toolElement.querySelector('.tool-params');
   if (paramsElement) {
     try {
       // Try to parse and format the input JSON
       const formatted = JSON.stringify(JSON.parse(input), null, 2);
-      paramsElement.textContent = `Parameters: ${formatted}`;
+      paramsElement.textContent = formatted;
     } catch (e) {
       // If we can't parse it yet, show the raw input
       paramsElement.textContent = `Parameters: ${input}`;
@@ -155,44 +157,61 @@ function updateToolParams(toolElement, input) {
   }
 }
 
-// Define system prompt
-const systemPrompt = `You are Baby Jarvis, a helpful AI assistant that can use tools to accomplish tasks.
-You can create and use JavaScript tools to help users solve problems.
-
-IMPORTANT: 
-1. When writing JavaScript code, you MUST always use arrow functions that receive a context parameter.
-2. Access helper functions through the context parameter, such as:
-  - context.getTool: Access other tools
-  - context.log: Log messages 
-  - context.sql: Execute database queries
-
-Example of correct code:
-({getTool, log}) => {
-  log('Starting task...');
-  return getTool('someFunction')('parameter');
+// Get actions from the file system and use them as tools
+/** @type {import('./actions.js').Action[]} */
+let actions = [];
+try {
+  actions = await getActions();
+} catch (error) {
+  // Create a dialog to notify user and allow retry with user interaction
+  const dialog = document.createElement('dialog');
+  dialog.textContent = 'Please select your project directory to load actions';
+  
+  const selectBtn = document.createElement('button');
+  selectBtn.textContent = 'Select Directory';
+  selectBtn.onclick = async () => {
+    dialog.close();
+    try {
+      actions = await getActions();
+      tools = actions.map(action => ({
+        name: action.name,
+        description: action.description,
+        input_schema: action.parameters
+      }));
+    } catch (err) {
+      console.error('Failed to load actions:', err);
+      dialog.showModal(); // Show again if failed
+    }
+  };
+  
+  dialog.appendChild(document.createElement('br'));
+  dialog.appendChild(selectBtn);
+  
+  document.body.appendChild(dialog);
+  
+  // Show the dialog immediately
+  dialog.showModal();
 }
-
-This format is strictly required for all JavaScript code execution.`; // Your existing system prompt
 
 /**
  * List of tools available to the assistant
  * @type {Tool[]}
  */
-const tools = [
-  {
-    name: "runJavaScript",
-    description: "Execute arbitrary JavaScript code and return the result. Code must be an arrow function that receives a context object.",
-    input_schema: {
-      type: "object",
-      properties: {
-        code: {
-          type: "string",
-          description: "The JavaScript code to execute. Must be an arrow function that accepts a context object with helpers like getTool, log, and sql. Example: '({getTool, log}) => { return getTool(\"echo\")(\"hello\"); }'"
-        }
-      },
-      required: ["code"]
-    }
-  },
+let tools = actions.map(action => ({
+  name: action.name,
+  description: action.description,
+  input_schema: action.parameters
+}));
+
+/**
+ * Get an action by name
+ * @param {string} actionName 
+ * @returns {import('./actions.js').Action | undefined} The action object or undefined if not found
+ */
+function getAction(actionName) {
+  return actions.find(action => action.name === actionName);
+}
+
   // {
   //   name: "createTool",
   //   description: "Create a new JavaScript tool that can be used later. Only use this when explicitly asked to create a tool.",
@@ -224,7 +243,26 @@ const tools = [
   //     required: []
   //   }
   // }
-];
+
+// Define system prompt
+const systemPrompt = `You are Baby Jarvis, a helpful AI assistant that can use tools to accomplish tasks.
+You can create and use JavaScript tools to help users solve problems.
+
+IMPORTANT: 
+1. When writing JavaScript code, you MUST always use arrow functions that receive a context parameter.
+2. Access helper functions through the context parameter, such as:
+  - context.getTool: Access other tools
+  - context.log: Log messages
+  - context.sql: Execute database queries
+
+Example of correct code:
+({getTool, log, createApp}) => {
+  log('Starting task...');
+  createApp( ... )
+  return getTool('someFunction')('parameter');
+}
+
+This format is strictly required for all JavaScript code execution.`;
 
 /**
  * Send a message to the AI
@@ -244,10 +282,7 @@ async function sendMessageToAI(message) {
       onEvent: handleStreamEvent
     });
 
-    // History management remains similar
-    if (messageHistory.length > 20) {
-      messageHistory = messageHistory.slice(messageHistory.length - 20);
-    }
+    // TODO: Max history management
     
     console.log("Updated message history:", messageHistory);
   } catch (error) {
@@ -330,7 +365,9 @@ async function handleStreamEvent(event) {
       toolContent.input = parsedInput;
       AddToolToHistory(event.index, toolContent);
       try {
-        const result = await runJs(parsedInput.code);
+        const action = getAction(toolContent.name);
+        if (!action) throw new Error(`Action ${toolContent.name} not found`);
+        const result = await action.action_fn(parsedInput);
         updateToolWithResult(toolContent.element, result, true);
         messageHistory.push({ role: 'tool', content: [{ type: 'tool_result', tool_use_id: toolContent.id, content: JSON.stringify(result) }] });
       } catch (e) {
