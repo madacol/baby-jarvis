@@ -199,38 +199,6 @@ function getAction(actionName) {
   return actions.find(action => action.name === actionName);
 }
 
-  // {
-  //   name: "createTool",
-  //   description: "Create a new JavaScript tool that can be used later. Only use this when explicitly asked to create a tool.",
-  //   input_schema: {
-  //     type: "object",
-  //     properties: {
-  //       name: {
-  //         type: "string",
-  //         description: "The name of the tool to create. Should be camelCase."
-  //       },
-  //       description: {
-  //         type: "string",
-  //         description: "A description of what the tool does and when to use it."
-  //       },
-  //       functionCode: {
-  //         type: "string",
-  //         description: "The JavaScript function code for this tool. Must be an arrow function. Example: '(param1, param2) => { return param1 + param2; }'"
-  //       }
-  //     },
-  //     required: ["name", "description", "functionCode"]
-  //   }
-  // },
-  // {
-  //   name: "listTools",
-  //   description: "List all available tools that have been created.",
-  //   input_schema: {
-  //     type: "object",
-  //     properties: {},
-  //     required: []
-  //   }
-  // }
-
 // Define system prompt
 const systemPrompt = `You are Baby Jarvis, a helpful AI assistant that can use tools to accomplish tasks.
 You can create and use JavaScript tools to help users solve problems.
