@@ -145,9 +145,13 @@ function updateToolParams(toolElement, input) {
   const paramsElement = toolElement.querySelector('.tool-params');
   if (paramsElement) {
     try {
-      // Try to parse and format the input JSON
-      const formatted = JSON.stringify(JSON.parse(input), null, 2);
-      paramsElement.textContent = formatted;
+      const params = JSON.parse(input);
+      if (params.code) {
+        paramsElement.textContent = params.code;
+      } else {
+        // Try to parse and format the input JSON
+        paramsElement.textContent = JSON.stringify(params, null, 2);
+      }
     } catch (e) {
       // If we can't parse it yet, show the raw input
       paramsElement.textContent = `Parameters: ${input}`;
