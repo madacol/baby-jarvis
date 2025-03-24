@@ -54,7 +54,7 @@ function addMessageToUI(message, isUser, messageClasses = []) {
     messageElement.textContent = message;
   } 
   // Message with content array (Anthropic format)
-  else if (message.content && Array.isArray(message.content)) {
+  else if (Array.isArray(message?.content)) {
     message.content.forEach(block => {
       if (block.type === 'text') {
         const textElement = document.createElement('div');
