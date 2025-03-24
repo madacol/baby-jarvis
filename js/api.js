@@ -5,11 +5,11 @@
 /**
  * @typedef {Object} ClaudeMessage
  * @property {string} role - The role of the message sender
- * @property {{role: string, content: Array<
+ * @property {Array<
  *   {type: 'text', text: string}
- *   | {type: 'tool_use', id: string, name: string, input: string}
+ *   | {type: 'tool_use', id: string, name: string, input: {}}
  *   | {type: 'tool_result', tool_use_id: string, content: (string | Array<import('./app.js').ContentBlock>), is_error?: boolean}
- * >}} content - The content of the message
+ * >} content - The content of the message
  * 
  * @typedef { {name: string, description: string, input_schema: {}} } ClaudeTool
  */
@@ -84,6 +84,7 @@ async function sendMessage({ messages, systemPrompt, actions, onEvent }) {
               text: content.text
             }
           case 'tool':
+            if (!content.input) throw new Error('Tool content must have an input');
             return {
               type: 'tool_use',
               id: content.id,
@@ -97,6 +98,8 @@ async function sendMessage({ messages, systemPrompt, actions, onEvent }) {
               content: content.content,
               is_error: content.is_error
             }
+          default:
+            throw new Error(`Unknown message content type: ${content.type}`);
         }
       })
     }
