@@ -10,6 +10,8 @@
  *   | {type: 'tool_use', id: string, name: string, input: string}
  *   | {type: 'tool_result', tool_use_id: string, content: (string | Array<import('./app.js').ContentBlock>), is_error?: boolean}
  * >}} content - The content of the message
+ * 
+ * @typedef { {name: string, description: string, input_schema: {}} } ClaudeTool
  */
 
 // API configuration
@@ -48,11 +50,21 @@ function getApiKey() {
  * @param {Object} params
  * @param {import('./app.js').Message[]} params.messages - Messages to send to Claude
  * @param {string} params.systemPrompt - System prompt for the conversation
- * @param {import('./app.js').Tool[]} params.tools - List of available tools
+ * @param {import('./actions.js').Action[]} params.actions - List of available actions
  * @param {(event: import('./app.js').StreamingEvent) => void} params.onEvent - Callback for streaming events
  */
-async function sendMessage({ messages, systemPrompt, tools, onEvent }) {
+async function sendMessage({ messages, systemPrompt, actions, onEvent }) {
   const apiKey = getApiKey();
+
+  /**
+   * List of tools available to the assistant
+   * @type {ClaudeTool[]}
+   */
+  const tools = actions.map(action => ({
+    name: action.name,
+    description: action.description,
+    input_schema: action.parameters
+  }));
   
   if (!apiKey) {
     throw new Error('API key not found. Please set your Anthropic API key.');

@@ -33,8 +33,6 @@ const saveKeyButton = /** @type {HTMLButtonElement} */ (document.getElementById(
  * } StreamingEvent
  * 
  * @typedef { {role: string, content: ContentBlock[]} } Message
- * 
- * @typedef { {name: string, description: string, input_schema: {}} } Tool
  */
 
 /** 
@@ -173,11 +171,6 @@ try {
     dialog.close();
     try {
       actions = await getActions();
-      tools = actions.map(action => ({
-        name: action.name,
-        description: action.description,
-        input_schema: action.parameters
-      }));
     } catch (err) {
       console.error('Failed to load actions:', err);
       dialog.showModal(); // Show again if failed
@@ -192,16 +185,6 @@ try {
   // Show the dialog immediately
   dialog.showModal();
 }
-
-/**
- * List of tools available to the assistant
- * @type {Tool[]}
- */
-let tools = actions.map(action => ({
-  name: action.name,
-  description: action.description,
-  input_schema: action.parameters
-}));
 
 /**
  * Get an action by name
@@ -278,7 +261,7 @@ async function sendMessageToAI(message) {
     await sendMessage({
       messages: messageHistory,
       systemPrompt,
-      tools,
+      actions,
       onEvent: handleStreamEvent
     });
 
@@ -378,7 +361,7 @@ async function handleStreamEvent(event) {
       sendMessage({
         messages: messageHistory,
         systemPrompt,
-        tools,
+        actions,
         onEvent: handleStreamEvent
       });
       break;
