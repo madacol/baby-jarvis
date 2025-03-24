@@ -7,7 +7,7 @@ import {
   saveApiKey, 
   getApiKey, 
   sendMessage 
-} from './api.js';
+} from './ClaudeAPI.js';
 
 // Global DOM element references with type annotations
 const chatContainer = /** @type {HTMLDivElement} */ (document.getElementById('chat-container'));
