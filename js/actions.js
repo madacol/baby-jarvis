@@ -1,33 +1,58 @@
+import { PGlite } from '../node_modules/@electric-sql/pglite/dist/index.js';
+
 /**
- * @typedef {{
- *   permission_id: string,
- *   name: string,
- *   description?: string,
- * }} Permission
- * 
- * @typedef {{
- *   fileName: string,
- *   app_id: string | null,
- *   name: string,
- *   description: string,
- *   parameters: {},
- *   action_fn: (input: any) => Promise<any>
- *   test_fn: (()=>Promise<boolean>)[]
- *   permissions: string[]
- * }} Action
- * 
- * @typedef {{
- *   app_id: string,
- *   name: string,
- *   description: string,
- *   actions: Action[]
- * }} App
+ * Execute a custom action
+ * @param {string} actionName - The name of the action to execute
+ * @param {{}} input - The input to pass to the action
+ * @returns {Promise<any>} Result of the action execution
  */
+export async function executeAction(actionName, input) {
+  const action = await getAction(actionName);
+  if (!action) {
+    throw new Error(`Action "${actionName}" not found`);
+  }
+
+  const context = {
+    db: new PGlite(`${actionName}.pglite`),
+    log
+  }
+  
+  try {
+    return await action.action_fn(context, input);
+  } catch (error) {
+    console.error(`Error executing action ${actionName}:`, error);
+    throw error;
+  }
+}
+
+// Log function for tools to use
+function log(...args) {
+  const message = args.join(' ');
+  console.log(...args);
+  
+  // Add to chat UI if available
+  try {
+    const chatContainer = document.getElementById('chat-container');
+    if (chatContainer) {
+      const logElement = document.createElement('div');
+      logElement.className = 'log-message';
+      logElement.textContent = message;
+      chatContainer.appendChild(logElement);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+  } catch (e) {
+    console.error('Error displaying log in UI:', e);
+  }
+  
+  return message;
+}
+
+let directoryHandle;
 
 /**
  * Retrieves all available actions from the defaultActions directory
  * using the File System Access API
- * @returns {Promise<Action[]>} Array of action objects with name derived from filename
+ * @returns {Promise<AppAction[]>} Array of action objects with name derived from filename
  */
 export async function getActions() {
   // Check if File System Access API is supported
@@ -36,7 +61,7 @@ export async function getActions() {
   }  
   // Get the defaultActions directory
   // Need user interaction to access file system
-  const directoryHandle = await window.showDirectoryPicker();
+  directoryHandle = await window.showDirectoryPicker();
 
   const defaultActionsHandle = await directoryHandle.getDirectoryHandle('actions');
   
@@ -50,7 +75,7 @@ export async function getActions() {
   }
   
   // Use map to process all files in parallel
-  const actions = (await Promise.all(
+  actions = (await Promise.all(
     entries.map(async (entry) => {
       // Get the file handle and read its content
       const fileHandle = await defaultActionsHandle.getFileHandle(entry.name);
@@ -69,7 +94,8 @@ export async function getActions() {
         if (module.default) {
           return {
             ...module.default,
-            fileName: entry.name
+            fileName: entry.name,
+            app_name: ''
           };
         }
 
@@ -88,3 +114,69 @@ export async function getActions() {
   return actions;
 }
 
+/** @type {AppAction[]} */
+let actions;
+
+/**
+ * Get a specific action by name from the file system
+ * @param {string} actionName - The name of the action to retrieve
+ * @returns {Promise<AppAction|null>} The action object or null if not found
+ */
+export async function getAction(actionName) {
+
+  // Check if we have a directory handle
+  if (!directoryHandle) {
+    throw new Error('No directory handle available. Please select a directory first.');
+  }
+  
+  try {
+    const defaultActionsHandle = await directoryHandle.getDirectoryHandle('actions');
+    
+    // Try to find the file with the matching action name
+    // First check for exact filename match (actionName.js)
+    const fileName = actions.find(action => action.name === actionName)?.fileName;
+    if (!fileName) {
+      throw new Error(`Action "${actionName}" not found`);
+    }
+
+    try {
+      // Get the file handle and read its content
+      const fileHandle = await defaultActionsHandle.getFileHandle(fileName);
+      const file = await fileHandle.getFile();
+      const content = await file.text();
+      
+      // Create a blob URL from the content
+      const blob = new Blob([content], { type: 'application/javascript' });
+      const blobURL = URL.createObjectURL(blob);
+      
+      try {
+        // Import the module
+        const module = await import(blobURL);
+
+        /** @type {Action} */
+        const action = module.default;
+        
+        // Return the action if it has a default export
+        if (action) {
+          return {
+            ...action,
+            app_name: '',
+            fileName
+          };
+        }
+        
+        console.error(`Action ${fileName} has no default export`);
+        return null;
+      } finally {
+        // Clean up
+        URL.revokeObjectURL(blobURL);
+      }
+    } catch (fileError) {
+      console.error(`Could not find action file for ${actionName}:`, fileError);
+      return null;
+    }
+  } catch (error) {
+    console.error(`Error retrieving action ${actionName}:`, error);
+    throw error;
+  }
+}

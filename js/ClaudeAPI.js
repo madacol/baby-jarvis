@@ -8,7 +8,7 @@
  * @property {Array<
  *   {type: 'text', text: string}
  *   | {type: 'tool_use', id: string, name: string, input: {}}
- *   | {type: 'tool_result', tool_use_id: string, content: (string | Array<import('./app.js').ContentBlock>), is_error?: boolean}
+ *   | {type: 'tool_result', tool_use_id: string, content: (string | Array<ContentBlock>), is_error?: boolean}
  * >} content - The content of the message
  * 
  * @typedef { {name: string, description: string, input_schema: {}} } ClaudeTool
@@ -48,10 +48,10 @@ function getApiKey() {
 /**
  * Send a message to Claude and get a streaming response
  * @param {Object} params
- * @param {import('./app.js').Message[]} params.messages - Messages to send to Claude
+ * @param {Message[]} params.messages - Messages to send to Claude
  * @param {string} params.systemPrompt - System prompt for the conversation
- * @param {import('./actions.js').Action[]} params.actions - List of available actions
- * @param {(event: import('./app.js').StreamingEvent) => void} params.onEvent - Callback for streaming events
+ * @param {AppAction[]} params.actions - List of available actions
+ * @param {(event: StreamingEvent) => void} params.onEvent - Callback for streaming events
  */
 async function sendMessage({ messages, systemPrompt, actions, onEvent }) {
   const apiKey = getApiKey();

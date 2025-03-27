@@ -2,7 +2,7 @@
  * Main application file for Baby Jarvis
  */
 
-import { getActions } from './actions.js';
+import { executeAction, getActions } from './actions.js';
 import { 
   saveApiKey, 
   getApiKey, 
@@ -17,24 +17,6 @@ const apiKeyInput = /** @type {HTMLInputElement} */ (document.getElementById('ap
 const saveKeyButton = /** @type {HTMLButtonElement} */ (document.getElementById('save-key'));
 
 // Add type definitions at top
-/** 
- * @typedef { { type: 'text', text: string, element?: HTMLDivElement } } TextContentBlock
- * @typedef { { type: 'tool', id: string, name: string, input_string: string, input?: {}, element: HTMLDivElement } } ToolContentBlock
- * @typedef { { type: 'image', source: { type: 'base64', media_type: string, data: string } } } ImageContentBlock
- * @typedef { { type: 'tool_result', tool_use_id: string, content: (string | ContentBlock[]), is_error?: boolean } } ToolResultContentBlock
- * @typedef { TextContentBlock | ToolContentBlock | ImageContentBlock | ToolResultContentBlock } ContentBlock
- * @typedef { { type: 'text_start', index: number, content: { text: string } }
- *  | { type: 'text_delta', index: number, content: { text: string } }
- *  | { type: 'text_stop', index: number }
- *  | { type: 'tool_start', index: number, content: { id: string, name: string } }
- *  | { type: 'tool_delta', index: number, content: { input: string } }
- *  | { type: 'tool_stop', index: number }
- *  | { type: 'content_block_stop', index: number }
- * } StreamingEvent
- * 
- * @typedef { {role: string, content: ContentBlock[]} } Message
- */
-
 /** 
  * Message history for context
  * @type {Message[]}
@@ -160,7 +142,7 @@ function updateToolParams(toolElement, input) {
 }
 
 // Get actions from the file system and use them as tools
-/** @type {import('./actions.js').Action[]} */
+/** @type {AppAction[]} */
 let actions = [];
 try {
   actions = await getActions();
@@ -188,15 +170,6 @@ try {
   
   // Show the dialog immediately
   dialog.showModal();
-}
-
-/**
- * Get an action by name
- * @param {string} actionName 
- * @returns {import('./actions.js').Action | undefined} The action object or undefined if not found
- */
-function getAction(actionName) {
-  return actions.find(action => action.name === actionName);
 }
 
 // Define system prompt
@@ -320,13 +293,12 @@ async function handleStreamEvent(event) {
       toolContent.input = parsedInput;
       AddToolToHistory(event.index, toolContent);
       try {
-        const action = getAction(toolContent.name);
-        if (!action) throw new Error(`Action ${toolContent.name} not found`);
-        const result = await action.action_fn(parsedInput);
+        const result = await executeAction(toolContent.name, parsedInput);
         updateToolWithResult(toolContent.element, result, true);
         messageHistory.push({ role: 'tool', content: [{ type: 'tool_result', tool_use_id: toolContent.id, content: JSON.stringify(result) }] });
       } catch (e) {
         updateToolWithResult(toolContent.element, e.message, false);
+        console.error('Error executing action:', e);
         messageHistory.push({ role: 'tool', content: [{ type: 'tool_result', tool_use_id: toolContent.id, content: e.message, is_error: true }] });
       }
 
