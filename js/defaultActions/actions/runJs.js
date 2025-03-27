@@ -7,7 +7,7 @@ export default {
     properties: {
       code: {
         type: "string",
-        description: "The JavaScript code to execute. Must be an arrow function that accepts a context object that has helpers like getTool, log, and sql. Example: '({getTool, log}) => { return getTool(\"echo\")(\"hello\"); }'",
+        description: "The JavaScript code to execute. Must be an arrow function that accepts a context object that has helpers like `log()` to log extra information, the main answer must be returned form the function. Example: '({log, getActions}) => { return getActions(); }'",
       },
     },
     required: ["code"],

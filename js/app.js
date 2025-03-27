@@ -178,17 +178,19 @@ You can create and use JavaScript tools to help users solve problems.
 
 IMPORTANT: 
 1. When writing JavaScript code, you MUST always use arrow functions that receive a context parameter.
-2. Access helper functions through the context parameter, such as:
-  - context.getTool: Access other tools
-  - context.log: Log messages
-  - context.sql: Execute database queries
+2. You have access to a context parameter, which has the following properties:
+- context.log: Log messages
+- context.db: A PGlite database instance, prefer using \`db.sql\`...\`\`\` to execute queries
+- context.directoryHandle: Access the file system
 
 Example of correct code:
-({getTool, log, createApp}) => {
+\`\`\`javascript
+({log, db, directoryHandle}, params) => {
   log('Starting task...');
-  createApp( ... )
-  return getTool('someFunction')('parameter');
+  const result = db.sql\`SELECT * FROM users WHERE id = \${params.userId}\`;
+  return directoryHandle.getFileHandle('myfile.txt');
 }
+\`\`\`
 
 This format is strictly required for all JavaScript code execution.`;
 
@@ -206,7 +208,7 @@ async function sendMessageToAI(message) {
     await sendMessage({
       messages: messageHistory,
       systemPrompt,
-      actions,
+      actions: await getActions(),
       onEvent: handleStreamEvent
     });
 
@@ -305,7 +307,7 @@ async function handleStreamEvent(event) {
       sendMessage({
         messages: messageHistory,
         systemPrompt,
-        actions,
+        actions: await getActions(),
         onEvent: handleStreamEvent
       });
       break;

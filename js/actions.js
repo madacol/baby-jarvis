@@ -13,10 +13,13 @@ export async function executeAction(actionName, input) {
   }
 
   const context = {
-    db: new PGlite(`${actionName}.pglite`),
-    log
+    // db: new PGlite(`${actionName}.pglite`),
+    db: new PGlite(),
+    log,
+    directoryHandle,
+    getActions
   }
-  
+
   try {
     return await action.action_fn(context, input);
   } catch (error) {
@@ -47,6 +50,7 @@ function log(...args) {
   return message;
 }
 
+/** @type {FileSystemDirectoryHandle} */
 let directoryHandle;
 
 /**
@@ -61,7 +65,9 @@ export async function getActions() {
   }  
   // Get the defaultActions directory
   // Need user interaction to access file system
-  directoryHandle = await window.showDirectoryPicker();
+  if (!directoryHandle) {
+    directoryHandle = await window.showDirectoryPicker();
+  }
 
   const defaultActionsHandle = await directoryHandle.getDirectoryHandle('actions');
   

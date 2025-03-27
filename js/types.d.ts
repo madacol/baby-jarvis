@@ -16,18 +16,18 @@ type Message = {role: string, content: ContentBlock[]}
 /* Actions */
 
 type Context = {
-    getAction?: (name: string) => (...args: any[]) => Promise<any>;
-    log?: (...args: any[]) => void;
-    db?: import('@electric-sql/pglite').PGlite;
-    directoryHandle?: FileSystemDirectoryHandle;
+    log: (...args: any[]) => void;
+    db: import('@electric-sql/pglite').PGlite;
+    directoryHandle: FileSystemDirectoryHandle;
+    getActions: () => Promise<Action[]>;
 }
 
 type Action = {
     name: string; // The name of the action
     description: string; // Description of what the action does
     parameters: {type: 'object', properties: Record<string, any>, required?: string[]}; // a JSON-Schema for the action_fn's parameters
-    action_fn: (context: Context, params: any) => Promise<any>; // The function that implements the action
-    test_functions?: ((context: Context, params: any) => Promise<any>)[]; // Optional test functions for the action
+    action_fn: (context: Context, params: any) => (Promise<any> | any); // The function that implements the action
+    test_functions?: ((context: Context, params: any) => (Promise<any> | any))[]; // Optional test functions for the action
     permissions?: string[]; // Optional permissions required by the action
 }
 
