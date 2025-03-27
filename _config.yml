@@ -2,15 +2,7 @@
 
 # Explicitly include node_modules directory
 include:
-  - "node_modules/**"
-
-# Other common settings
-exclude:
-  - .gitignore
-  - build.sh
-  - README.md
-  - GITHUB_PAGES_DEPLOYMENT.md
-  - .git
+  - "build/node_modules/**"
 
 # Don't process node_modules
 keep_files:
