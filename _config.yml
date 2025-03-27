@@ -1,0 +1,21 @@
+# Jekyll configuration
+
+# Explicitly include node_modules directory
+include:
+  - "node_modules/**"
+
+# Other common settings
+exclude:
+  - .gitignore
+  - build.sh
+  - README.md
+  - GITHUB_PAGES_DEPLOYMENT.md
+  - .git
+
+# Don't process node_modules
+keep_files:
+  - "node_modules"
+
+# Basic site settings
+title: "Baby Jarvis"
+baseurl: "" 
