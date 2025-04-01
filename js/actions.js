@@ -108,7 +108,7 @@ export async function getActions() {
         return null;
       } catch (importError) {
         console.error(`Error importing action ${entry.name}:`, importError);
-        throw importError;
+        return null;
       } finally {
         // Clean up
         URL.revokeObjectURL(blobURL);
