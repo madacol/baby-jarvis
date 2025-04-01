@@ -1,14 +1,17 @@
 /** @type {Action} */
 export default {
   name: "createAction",
-  description: "Create a new action that will be stored permanently so the user can use it in the future. IMPORTANT: This tool should ONLY be executed when the user EXPLICITLY requests to create a new custom action. Do not use this proactively or as part of general problem-solving unless the user has specifically asked to 'create an action' or 'make a custom action'. When in doubt, ask the user first if they want to create a permanent action rather than executing this tool.",
+  description: `Creates and persistently stores a new custom action in the system that can be reused in future interactions.
+IMPORTANT: This tool should ONLY be executed when the user EXPLICITLY requests to create a new custom action.
+Do not use this proactively or as part of general problem-solving unless the user has specifically asked to 'create an action' or 'make a custom action'.
+When in doubt, ask the user first if they want to create a permanent action rather than executing this tool.`,
   parameters: {
     type: "object",
     properties: {
-      name: { type: "string", description: "The name of the action" },
-      description: { type: "string", description: "The description of the action" },
-      parameters: { type: "object", description: "A JSON schema for the parameters that will receive the action" },
-      action_function: { type: "string", description: "The action that is an arrow function, that receives a context object and the parameters object described in the schema" },
+      name: { type: "string", description: "The unique identifier and reference name for the action. Use a concise, descriptive name with camelCase formatting (e.g., 'fetchWeatherData', 'generateReport')." },
+      description: { type: "string", description: "A comprehensive explanation of what the action does, when to use it, what it returns, and any important usage notes. This helps users understand the action's purpose and proper usage context. Use `...` for multi-line descriptions." },
+      parameters: { type: "object", description: "A JSON schema defining the input parameters the action accepts. Include type, description, and required fields for each parameter. The schema follows standard JSON Schema format and will be used for validation and documentation." },
+      action_function: { type: "string", description: "The implementation of the action as an arrow function that receives two arguments: a context object (providing access to system capabilities) and the parameters object containing user inputs. Function body should handle error cases and return appropriate values." },
     },
     required: ["name", "description", "parameters", "action_function"],
   },
