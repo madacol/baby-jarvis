@@ -52,9 +52,6 @@ export default {
       const writable = await fileHandle.createWritable();
       await writable.write(actionModule);
       await writable.close();
-
-      await context.getActions();
-
     } catch (error) {
       console.error('Error creating action:', error);
       throw error;
