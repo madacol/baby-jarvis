@@ -41,7 +41,6 @@ function log(...args) {
       logElement.className = 'log-message';
       logElement.textContent = message;
       chatContainer.appendChild(logElement);
-      chatContainer.scrollTop = chatContainer.scrollHeight;
     }
   } catch (e) {
     console.error('Error displaying log in UI:', e);

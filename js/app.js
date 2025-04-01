@@ -23,6 +23,25 @@ const saveKeyButton = /** @type {HTMLButtonElement} */ (document.getElementById(
  */ 
 let messageHistory = [];
 
+const autoScroll = (() => {
+  // Private variables within closure
+  const threshold = 10;
+  let shouldAutoScroll = true;
+
+  // Attach scroll event listener
+  chatContainer.addEventListener('scroll', () => {
+    const { scrollHeight, scrollTop, clientHeight } = chatContainer;
+    // If the container is scrolled to the bottom, enable auto-scrolling
+    shouldAutoScroll = (scrollHeight - scrollTop - clientHeight) < threshold;
+  })
+
+  return () => {
+    if (shouldAutoScroll) {
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+  };
+})();
+
 // Add a message to the UI
 function addMessageToUI(message, isUser, messageClasses = []) {
   const messageElement = document.createElement('div');
@@ -47,9 +66,7 @@ function addMessageToUI(message, isUser, messageClasses = []) {
   }
   
   chatContainer.appendChild(messageElement);
-  
-  // Scroll to bottom
-  chatContainer.scrollTop = chatContainer.scrollHeight;
+  autoScroll();
   
   return messageElement;
 }
@@ -68,9 +85,7 @@ function updateTextBlock(messageElement, text, blockIndex) {
   
   // Update the text content
   textBlockElement.textContent = text;
-  
-  // Scroll to bottom
-  chatContainer.scrollTop = chatContainer.scrollHeight;
+  autoScroll();
   
   return textBlockElement;
 }
@@ -92,9 +107,7 @@ function addToolUseToUI(toolUse) {
   
   // Add to chat
   chatContainer.appendChild(toolElement);
-  
-  // Scroll to bottom
-  chatContainer.scrollTop = chatContainer.scrollHeight;
+  autoScroll();
   
   return toolElement;
 }
@@ -114,8 +127,7 @@ function updateToolWithResult(toolElement, result, success) {
     loadingElement.className = 'tool-error';
   }
   
-  // Scroll to bottom
-  chatContainer.scrollTop = chatContainer.scrollHeight;
+  autoScroll();
 }
 
 /**
