@@ -244,7 +244,6 @@ const content_blocks = new Map();
  * @param {StreamingEvent} event 
  */
 async function handleStreamEvent(event) {
-  console.log('Handling stream event:', event);
   switch (event.type) {
     case 'text_start': {
       const element = addMessageToUI('', false);

@@ -168,7 +168,6 @@ async function sendMessage({ messages, systemPrompt, actions, onEvent }) {
             }
             
             const data = JSON.parse(jsonData);
-            console.log("SSE event:", data);
 
             // Handle event types
             switch (data.type) {
@@ -223,16 +222,6 @@ async function sendMessage({ messages, systemPrompt, actions, onEvent }) {
                   type: 'content_block_stop',
                   index: data.index
                 });
-                break;
-                
-              case 'message_delta':
-                // Update message with delta information
-                if (data.delta.stop_reason) {
-                  console.log('Message delta - Stop reason:', data.delta.stop_reason);
-                }
-                if (data.usage) {
-                  console.log("Message delta - Usage:", data.usage);
-                }
                 break;
 
               case 'error':
