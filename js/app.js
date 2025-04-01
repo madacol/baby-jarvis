@@ -153,37 +153,6 @@ function updateToolParams(toolElement, input) {
   }
 }
 
-// Get actions from the file system and use them as tools
-/** @type {AppAction[]} */
-let actions = [];
-try {
-  actions = await getActions();
-} catch (error) {
-  // Create a dialog to notify user and allow retry with user interaction
-  const dialog = document.createElement('dialog');
-  dialog.textContent = 'Please select your project directory to load actions';
-  
-  const selectBtn = document.createElement('button');
-  selectBtn.textContent = 'Select Directory';
-  selectBtn.onclick = async () => {
-    dialog.close();
-    try {
-      actions = await getActions();
-    } catch (err) {
-      console.error('Failed to load actions:', err);
-      dialog.showModal(); // Show again if failed
-    }
-  };
-  
-  dialog.appendChild(document.createElement('br'));
-  dialog.appendChild(selectBtn);
-  
-  document.body.appendChild(dialog);
-  
-  // Show the dialog immediately
-  dialog.showModal();
-}
-
 // Define system prompt
 const systemPrompt = `You are Baby Jarvis, a helpful AI assistant that can use tools to accomplish tasks.
 You can create and use JavaScript tools to help users solve problems.
