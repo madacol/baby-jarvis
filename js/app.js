@@ -200,7 +200,11 @@ Example of correct code:
 ({log, db, directoryHandle}, params) => {
   log('Starting task...');
   const result = db.sql\`SELECT * FROM users WHERE id = \${params.userId}\`;
-  return directoryHandle.getFileHandle('myfile.txt');
+  return directoryHandle.getFileHandle('result.txt', { create: true }).then(fileHandle => {
+    return fileHandle.createWritable().then(writer => {
+      return writer.write(result);
+    });
+  });
 }
 \`\`\`
 
