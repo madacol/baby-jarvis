@@ -1627,11 +1627,11 @@ function Fe(e) {
 async function Ae(e, t) {
   let r2;
   if (e && t === "nodefs") {
-    let { NodeFS: a2 } = await __vitePreload(() => import("./nodefs-BgP1DG3h.js"), true ? [] : void 0, import.meta.url);
+    let { NodeFS: a2 } = await __vitePreload(() => import("./nodefs-Dph0I4qU.js"), true ? [] : void 0, import.meta.url);
     r2 = new a2(e);
   } else if (e && t === "idbfs") r2 = new ee(e);
   else if (e && t === "opfs-ahp") {
-    let { OpfsAhpFS: a2 } = await __vitePreload(() => import("./opfs-ahp-Dr44dKU9.js"), true ? [] : void 0, import.meta.url);
+    let { OpfsAhpFS: a2 } = await __vitePreload(() => import("./opfs-ahp-VnZcIUZR.js"), true ? [] : void 0, import.meta.url);
     r2 = new a2(e);
   } else r2 = new te();
   return r2;
@@ -7231,6 +7231,167 @@ Y = /* @__PURE__ */ new WeakMap(), W = /* @__PURE__ */ new WeakMap(), j = /* @__
 };
 var Ue = pe;
 u$1();
+const DB_NAME = "baby-jarvis-db";
+const DB_VERSION = 1;
+const STORE_NAME = "app-settings";
+const DIR_HANDLE_KEY = "directoryHandle";
+async function openDatabase() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onerror = (event) => {
+      const target = event.target;
+      if (target instanceof IDBOpenDBRequest) {
+        reject(target.error);
+      } else {
+        reject(new Error("Unknown IndexedDB error"));
+      }
+    };
+    request.onsuccess = (event) => {
+      const target = event.target;
+      if (target instanceof IDBOpenDBRequest) {
+        resolve(target.result);
+      } else {
+        reject(new Error("Unknown IndexedDB error"));
+      }
+    };
+    request.onupgradeneeded = (event) => {
+      const target = event.target;
+      if (target instanceof IDBOpenDBRequest) {
+        const db = target.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME);
+        }
+      }
+    };
+  });
+}
+async function saveDirectoryHandle(handle2) {
+  try {
+    if (handle2.requestPermission) {
+      const permission = await handle2.requestPermission({ mode: "readwrite" });
+      if (permission !== "granted") {
+        return;
+      }
+    }
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, "readwrite");
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.put(handle2, DIR_HANDLE_KEY);
+      request.onerror = (event) => {
+        const target = event.target;
+        if (target instanceof IDBRequest) {
+          reject(target.error);
+        } else {
+          reject(new Error("Unknown IndexedDB error"));
+        }
+      };
+      request.onsuccess = () => {
+        resolve();
+      };
+      transaction.oncomplete = () => {
+        db.close();
+      };
+    });
+  } catch (error) {
+    throw error;
+  }
+}
+async function getSavedDirectoryHandle() {
+  try {
+    const db = await openDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, "readonly");
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.get(DIR_HANDLE_KEY);
+      request.onerror = (event) => {
+        const target = event.target;
+        if (target instanceof IDBRequest) {
+          reject(target.error);
+        } else {
+          reject(new Error("Unknown IndexedDB error"));
+        }
+      };
+      request.onsuccess = (event) => {
+        const target = event.target;
+        if (target instanceof IDBRequest) {
+          resolve(target.result || null);
+        } else {
+          resolve(null);
+        }
+      };
+      transaction.oncomplete = () => {
+        db.close();
+      };
+    });
+  } catch (error) {
+    return null;
+  }
+}
+async function ensureDefaultActionsExist(directoryHandle2) {
+  try {
+    let actionsHandle;
+    try {
+      actionsHandle = await directoryHandle2.getDirectoryHandle("actions", { create: true });
+    } catch (error) {
+      console.error("Error creating actions directory:", error);
+      return;
+    }
+    const defaultActions = [
+      "createActions.js",
+      "modifyAction.js",
+      "readAction.js",
+      "runJs.js"
+    ];
+    for (const actionFile of defaultActions) {
+      try {
+        await actionsHandle.getFileHandle(actionFile);
+        continue;
+      } catch (error) {
+        try {
+          const response = await fetch(`/js/defaultActions/actions/${actionFile}`);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch ${actionFile}`);
+          }
+          const sourceCode = await response.text();
+          const fileHandle = await actionsHandle.getFileHandle(actionFile, { create: true });
+          const writable = await fileHandle.createWritable();
+          await writable.write(sourceCode);
+          await writable.close();
+          console.log(`Created ${actionFile} in the selected directory`);
+        } catch (error2) {
+          console.error(`Error fetching and copying ${actionFile}:`, error2);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error ensuring default actions exist:", error);
+  }
+}
+async function initializeDirectoryHandle(forceSelect = false) {
+  if (!("showDirectoryPicker" in window)) {
+    throw new Error("File System Access API not supported in this browser");
+  }
+  let directoryHandle2;
+  if (forceSelect) {
+    directoryHandle2 = await window.showDirectoryPicker();
+    await saveDirectoryHandle(directoryHandle2);
+    await ensureDefaultActionsExist(directoryHandle2);
+    return directoryHandle2;
+  }
+  const savedHandle = await getSavedDirectoryHandle();
+  if (savedHandle) {
+    try {
+      await savedHandle.requestPermission({ mode: "readwrite" });
+      return savedHandle;
+    } catch (error) {
+    }
+  }
+  directoryHandle2 = await window.showDirectoryPicker();
+  await saveDirectoryHandle(directoryHandle2);
+  await ensureDefaultActionsExist(directoryHandle2);
+  return directoryHandle2;
+}
 async function executeAction(actionName, input) {
   const action = await getAction(actionName);
   if (!action) {
@@ -7243,12 +7404,52 @@ async function executeAction(actionName, input) {
     directoryHandle,
     getActions
   };
-  try {
-    return await action.action_fn(context, input);
-  } catch (error) {
-    console.error(`Error executing action ${actionName}:`, error);
-    throw error;
+  if (!action.permissions?.requires_confirmation) {
+    try {
+      return await action.action_fn(context, input);
+    } catch (error) {
+      console.error(`Error executing action ${actionName}:`, error);
+      throw error;
+    }
   }
+  return await new Promise((resolve, reject) => {
+    const chatContainer2 = document.getElementById("chat-container");
+    if (!chatContainer2) {
+      console.error("Chat container not found");
+      reject(new Error("Chat container not found"));
+      return;
+    }
+    const buttonsContainer = document.createElement("div");
+    buttonsContainer.className = "action-buttons";
+    buttonsContainer.style.marginTop = "10px";
+    const confirmBtn = document.createElement("button");
+    confirmBtn.textContent = "Confirm";
+    confirmBtn.onclick = async () => {
+      if (buttonsContainer.parentNode) {
+        buttonsContainer.parentNode.removeChild(buttonsContainer);
+      }
+      try {
+        resolve(await action.action_fn(context, input));
+      } catch (error) {
+        console.error(`Error executing action ${actionName}:`, error);
+        reject(error);
+      }
+    };
+    const cancelBtn = document.createElement("button");
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.onclick = async () => {
+      if (buttonsContainer.parentNode) {
+        buttonsContainer.parentNode.removeChild(buttonsContainer);
+      }
+      reject(new Error("Execution cancelled by user"));
+    };
+    confirmBtn.style.marginRight = "10px";
+    confirmBtn.style.padding = "5px 10px";
+    cancelBtn.style.padding = "5px 10px";
+    buttonsContainer.appendChild(confirmBtn);
+    buttonsContainer.appendChild(cancelBtn);
+    chatContainer2.appendChild(buttonsContainer);
+  });
 }
 function log(...args2) {
   const message = args2.join(" ");
@@ -7260,7 +7461,6 @@ function log(...args2) {
       logElement.className = "log-message";
       logElement.textContent = message;
       chatContainer2.appendChild(logElement);
-      chatContainer2.scrollTop = chatContainer2.scrollHeight;
     }
   } catch (e) {
     console.error("Error displaying log in UI:", e);
@@ -7269,11 +7469,8 @@ function log(...args2) {
 }
 let directoryHandle;
 async function getActions() {
-  if (!("showDirectoryPicker" in window)) {
-    throw new Error("File System Access API not supported in this browser");
-  }
   if (!directoryHandle) {
-    directoryHandle = await window.showDirectoryPicker();
+    directoryHandle = await initializeDirectoryHandle();
   }
   const defaultActionsHandle = await directoryHandle.getDirectoryHandle("actions");
   const entries = [];
@@ -7282,7 +7479,7 @@ async function getActions() {
       entries.push(entry);
     }
   }
-  actions$1 = (await Promise.all(
+  actions = (await Promise.all(
     entries.map(async (entry) => {
       const fileHandle = await defaultActionsHandle.getFileHandle(entry.name);
       const file = await fileHandle.getFile();
@@ -7290,7 +7487,10 @@ async function getActions() {
       const blob = new Blob([content], { type: "application/javascript" });
       const blobURL = URL.createObjectURL(blob);
       try {
-        const module2 = await import(blobURL);
+        const module2 = await import(
+          /* @vite-ignore */
+          blobURL
+        );
         if (module2.default) {
           return {
             ...module2.default,
@@ -7302,22 +7502,22 @@ async function getActions() {
         return null;
       } catch (importError) {
         console.error(`Error importing action ${entry.name}:`, importError);
-        throw importError;
+        return null;
       } finally {
         URL.revokeObjectURL(blobURL);
       }
     })
   )).filter((action) => action !== null);
-  return actions$1;
+  return actions;
 }
-let actions$1;
+let actions;
 async function getAction(actionName) {
   if (!directoryHandle) {
-    throw new Error("No directory handle available. Please select a directory first.");
+    directoryHandle = await initializeDirectoryHandle();
   }
   try {
     const defaultActionsHandle = await directoryHandle.getDirectoryHandle("actions");
-    const fileName = actions$1.find((action) => action.name === actionName)?.fileName;
+    const fileName = actions.find((action) => action.name === actionName)?.fileName;
     if (!fileName) {
       throw new Error(`Action "${actionName}" not found`);
     }
@@ -7328,7 +7528,10 @@ async function getAction(actionName) {
       const blob = new Blob([content], { type: "application/javascript" });
       const blobURL = URL.createObjectURL(blob);
       try {
-        const module2 = await import(blobURL);
+        const module2 = await import(
+          /* @vite-ignore */
+          blobURL
+        );
         const action = module2.default;
         if (action) {
           return {
@@ -7452,7 +7655,6 @@ async function sendMessage({ messages, systemPrompt: systemPrompt2, actions: act
               continue;
             }
             const data = JSON.parse(jsonData);
-            console.log("SSE event:", data);
             switch (data.type) {
               case "message_start":
                 break;
@@ -7501,14 +7703,6 @@ async function sendMessage({ messages, systemPrompt: systemPrompt2, actions: act
                   index: data.index
                 });
                 break;
-              case "message_delta":
-                if (data.delta.stop_reason) {
-                  console.log("Message delta - Stop reason:", data.delta.stop_reason);
-                }
-                if (data.usage) {
-                  console.log("Message delta - Usage:", data.usage);
-                }
-                break;
               case "error":
                 throw new Error(data.error.message);
             }
@@ -7547,6 +7741,19 @@ const saveKeyButton = (
   document.getElementById("save-key")
 );
 let messageHistory = [];
+const autoScroll = (() => {
+  const threshold = 10;
+  let shouldAutoScroll = true;
+  chatContainer.addEventListener("scroll", () => {
+    const { scrollHeight, scrollTop, clientHeight } = chatContainer;
+    shouldAutoScroll = scrollHeight - scrollTop - clientHeight < threshold;
+  });
+  return () => {
+    if (shouldAutoScroll) {
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+  };
+})();
 function addMessageToUI(message, isUser, messageClasses = []) {
   const messageElement = document.createElement("div");
   messageElement.className = isUser ? "user-message" : "ai-message";
@@ -7565,7 +7772,7 @@ function addMessageToUI(message, isUser, messageClasses = []) {
     });
   }
   chatContainer.appendChild(messageElement);
-  chatContainer.scrollTop = chatContainer.scrollHeight;
+  autoScroll();
   return messageElement;
 }
 function updateTextBlock(messageElement, text, blockIndex) {
@@ -7577,7 +7784,7 @@ function updateTextBlock(messageElement, text, blockIndex) {
     messageElement.appendChild(textBlockElement);
   }
   textBlockElement.textContent = text;
-  chatContainer.scrollTop = chatContainer.scrollHeight;
+  autoScroll();
   return textBlockElement;
 }
 function addToolUseToUI(toolUse) {
@@ -7590,7 +7797,7 @@ function addToolUseToUI(toolUse) {
     <div class="tool-loading">Executing...</div>
   `;
   chatContainer.appendChild(toolElement);
-  chatContainer.scrollTop = chatContainer.scrollHeight;
+  autoScroll();
   return toolElement;
 }
 function updateToolWithResult(toolElement, result, success) {
@@ -7602,7 +7809,7 @@ function updateToolWithResult(toolElement, result, success) {
     loadingElement.textContent = `Error: ${result || "Unknown error"}`;
     loadingElement.className = "tool-error";
   }
-  chatContainer.scrollTop = chatContainer.scrollHeight;
+  autoScroll();
 }
 function updateToolParams(toolElement, input) {
   const paramsElement = toolElement.querySelector(".tool-params");
@@ -7619,28 +7826,6 @@ function updateToolParams(toolElement, input) {
     }
   }
 }
-let actions = [];
-try {
-  actions = await getActions();
-} catch (error) {
-  const dialog = document.createElement("dialog");
-  dialog.textContent = "Please select your project directory to load actions";
-  const selectBtn = document.createElement("button");
-  selectBtn.textContent = "Select Directory";
-  selectBtn.onclick = async () => {
-    dialog.close();
-    try {
-      actions = await getActions();
-    } catch (err2) {
-      console.error("Failed to load actions:", err2);
-      dialog.showModal();
-    }
-  };
-  dialog.appendChild(document.createElement("br"));
-  dialog.appendChild(selectBtn);
-  document.body.appendChild(dialog);
-  dialog.showModal();
-}
 const systemPrompt = `You are Baby Jarvis, a helpful AI assistant that can use tools to accomplish tasks.
 You can create and use JavaScript tools to help users solve problems.
 
@@ -7656,7 +7841,11 @@ Example of correct code:
 ({log, db, directoryHandle}, params) => {
   log('Starting task...');
   const result = db.sql\`SELECT * FROM users WHERE id = \${params.userId}\`;
-  return directoryHandle.getFileHandle('myfile.txt');
+  return directoryHandle.getFileHandle('result.txt', { create: true }).then(fileHandle => {
+    return fileHandle.createWritable().then(writer => {
+      return writer.write(result);
+    });
+  });
 }
 \`\`\`
 
@@ -7679,7 +7868,6 @@ async function sendMessageToAI(message) {
 }
 const content_blocks = /* @__PURE__ */ new Map();
 async function handleStreamEvent(event) {
-  console.log("Handling stream event:", event);
   switch (event.type) {
     case "text_start": {
       const element = addMessageToUI("", false);
@@ -7840,9 +8028,28 @@ userInput.addEventListener("keypress", (e) => {
     sendButton.click();
   }
 });
+document.getElementById("change-directory").addEventListener("click", async (event) => {
+  event.preventDefault();
+  await initializeDirectoryHandle(true);
+});
 const apiKey = getApiKey();
 if (apiKey) {
   apiKeyInput.value = "••••••••••••••••••••••••••••••••••••••••";
+}
+const hamburgerIcon = document.querySelector(".hamburger-icon");
+const menuContent = document.querySelector(".menu-content");
+if (hamburgerIcon && menuContent) {
+  hamburgerIcon.addEventListener("click", (e) => {
+    e.stopPropagation();
+    menuContent.classList.toggle("menu-active");
+    hamburgerIcon.classList.toggle("hamburger-active");
+  });
+  document.addEventListener("click", () => {
+    if (menuContent.classList.contains("menu-active")) {
+      menuContent.classList.remove("menu-active");
+      hamburgerIcon.classList.remove("hamburger-active");
+    }
+  });
 }
 addMessageToUI("Welcome to Baby Jarvis! I can help you with tasks by generating JavaScript and running it in your browser.", false);
 export {
