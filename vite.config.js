@@ -7,6 +7,16 @@ export default {
 
         minify: false,
         modulePreload: false,
-        rebaseConfig: false
+        rebaseConfig: false,
+
+        // Ensure the default action files are included in the build
+        rollupOptions: {
+            input: {
+                main: 'index.html',
+            },
+            output: {
+                manualChunks: undefined,
+            }
+        }
     }
 }
