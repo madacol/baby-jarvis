@@ -89,7 +89,7 @@ export async function getActions() {
       
       try {
         // Import the module
-        const module = await import(blobURL);
+        const module = await import(/* @vite-ignore */blobURL);
         
         // Return the action if it has a default export
         if (module.default) {
@@ -124,7 +124,6 @@ let actions;
  * @returns {Promise<AppAction|null>} The action object or null if not found
  */
 export async function getAction(actionName) {
-
   // Check if we have a directory handle
   if (!directoryHandle) {
     // Try to get the saved directory handle
@@ -153,7 +152,7 @@ export async function getAction(actionName) {
       
       try {
         // Import the module
-        const module = await import(blobURL);
+        const module = await import(/* @vite-ignore */blobURL);
 
         /** @type {Action} */
         const action = module.default;
