@@ -8,6 +8,7 @@ import {
   getApiKey, 
   sendMessage 
 } from './ClaudeAPI.js';
+import { initializeDirectoryHandle } from './directoryHandleStore.js';
 
 // Global DOM element references with type annotations
 const chatContainer = /** @type {HTMLDivElement} */ (document.getElementById('chat-container'));
@@ -389,10 +390,37 @@ userInput.addEventListener('keypress', (e) => {
   }
 });
 
+
+/** @type {HTMLAnchorElement} */
+(document.getElementById('change-directory')).addEventListener('click', async (event) => {
+  event.preventDefault();
+  await initializeDirectoryHandle(true);
+});
+
 // Check for API key
 const apiKey = getApiKey();
 if (apiKey) {
   apiKeyInput.value = '••••••••••••••••••••••••••••••••••••••••';
+}
+
+// Set up hamburger menu toggle
+const hamburgerIcon = document.querySelector('.hamburger-icon');
+const menuContent = document.querySelector('.menu-content');
+
+if (hamburgerIcon && menuContent) {
+  hamburgerIcon.addEventListener('click', (e) => {
+    e.stopPropagation();
+    menuContent.classList.toggle('menu-active');
+    hamburgerIcon.classList.toggle('hamburger-active');
+  });
+  
+  // Close menu when clicking outside of it
+  document.addEventListener('click', () => {
+    if (menuContent.classList.contains('menu-active')) {
+      menuContent.classList.remove('menu-active');
+      hamburgerIcon.classList.remove('hamburger-active');
+    }
+  });
 }
 
 // Welcome message
