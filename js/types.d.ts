@@ -28,7 +28,7 @@ type Action = {
     parameters: {type: 'object', properties: Record<string, any>, required?: string[]}; // a JSON-Schema for the action_fn's parameters
     action_fn: (context: Context, params: any) => (Promise<any> | any); // The function that implements the action
     test_functions?: ((context: Context, params: any) => (Promise<any> | any))[]; // Optional test functions for the action
-    permissions?: string[]; // Optional permissions required by the action
+    permissions?: {requires_confirmation?: boolean}; // Optional permissions required by the action
 }
 
 type AppAction = Action & {

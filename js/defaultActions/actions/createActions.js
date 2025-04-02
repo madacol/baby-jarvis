@@ -12,8 +12,17 @@ When in doubt, ask the user first if they want to create a permanent action rath
       description: { type: "string", description: "A comprehensive explanation of what the action does, when to use it, what it returns, and any important usage notes. This helps users understand the action's purpose and proper usage context. Use `...` for multi-line descriptions." },
       parameters: { type: "object", description: "A JSON schema defining the input parameters the action accepts. Include type, description, and required fields for each parameter. The schema follows standard JSON Schema format and will be used for validation and documentation." },
       action_function: { type: "string", description: "The implementation of the action as an arrow function that receives two arguments: a context object (providing access to system capabilities) and the parameters object containing user inputs. Function body should handle error cases and return appropriate values." },
+      permissions: {
+        type: "object",
+        properties: {
+          requires_confirmation: { type: "boolean", description: "Whether the action should be automatically run when the user requests it." }
+        }
+      },
     },
     required: ["name", "description", "parameters", "action_function"],
+  },
+  permissions: {
+    requires_confirmation: true
   },
   /**
    * Create a new action within an app

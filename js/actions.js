@@ -21,12 +21,70 @@ export async function executeAction(actionName, input) {
     getActions
   }
 
-  try {
-    return await action.action_fn(context, input);
-  } catch (error) {
-    console.error(`Error executing action ${actionName}:`, error);
-    throw error;
+  // If the action doesn't require confirmation, execute it immediately
+  if (!action.permissions?.requires_confirmation) {
+    try {
+      return await action.action_fn(context, input);
+    } catch (error) {
+      console.error(`Error executing action ${actionName}:`, error);
+      throw error;
+    }
   }
+
+  // If confirmation is required, show the confirmation buttons
+  return await new Promise((resolve, reject) => {
+    // Get the chat container
+    const chatContainer = document.getElementById('chat-container');
+    if (!chatContainer) {
+      console.error('Chat container not found');
+      reject(new Error('Chat container not found'));
+      return;
+    }
+
+    // Create a wrapper for the buttons
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.className = 'action-buttons';
+    buttonsContainer.style.marginTop = '10px';
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = 'Confirm';
+    confirmBtn.onclick = async () => {
+      // Remove the buttons container after clicking
+      if (buttonsContainer.parentNode) {
+        buttonsContainer.parentNode.removeChild(buttonsContainer);
+      }
+      
+      try {
+        resolve(await action.action_fn(context, input));
+      } catch (error) {
+        console.error(`Error executing action ${actionName}:`, error);
+        reject(error);
+      }
+    };
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.onclick = async () => {
+      // Remove the buttons container after clicking
+      if (buttonsContainer.parentNode) {
+        buttonsContainer.parentNode.removeChild(buttonsContainer);
+      }
+      
+      reject(new Error("Execution cancelled by user"));
+    };
+    
+    // Add style to buttons
+    confirmBtn.style.marginRight = '10px';
+    confirmBtn.style.padding = '5px 10px';
+    cancelBtn.style.padding = '5px 10px';
+    
+    // Append buttons to the container
+    buttonsContainer.appendChild(confirmBtn);
+    buttonsContainer.appendChild(cancelBtn);
+    
+    // Append the buttons container to the chat container
+    chatContainer.appendChild(buttonsContainer);
+  });
 }
 
 // Log function for tools to use
