@@ -1,4 +1,5 @@
 import { PGlite } from '../node_modules/@electric-sql/pglite/dist/index.js';
+import { initializeDirectoryHandle } from './directoryHandleStore.js';
 
 /**
  * Execute a custom action
@@ -58,14 +59,9 @@ let directoryHandle;
  * @returns {Promise<AppAction[]>} Array of action objects with name derived from filename
  */
 export async function getActions() {
-  // Check if File System Access API is supported
-  if (!('showDirectoryPicker' in window)) {
-    throw new Error('File System Access API not supported in this browser');
-  }  
-  // Get the defaultActions directory
-  // Need user interaction to access file system
   if (!directoryHandle) {
-    directoryHandle = await window.showDirectoryPicker();
+    // Try to get the saved directory handle
+    directoryHandle = await initializeDirectoryHandle();
   }
 
   const defaultActionsHandle = await directoryHandle.getDirectoryHandle('actions');
@@ -131,7 +127,8 @@ export async function getAction(actionName) {
 
   // Check if we have a directory handle
   if (!directoryHandle) {
-    throw new Error('No directory handle available. Please select a directory first.');
+    // Try to get the saved directory handle
+    directoryHandle = await initializeDirectoryHandle();
   }
   
   try {
