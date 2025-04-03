@@ -1,7 +1,7 @@
 /** @type {Action} */
 export default {
   name: "runJavascript",
-  description: "Execute arbitrary JavaScript code and return the result. Code must be an arrow function that receives a context object. Use this to validate code before using it in an action.",
+  description: "Use this to execute any JavaScript code and show results. The code must be an arrow function that receives a context object.",
   parameters: {
     type: "object",
     properties: {
