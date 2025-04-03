@@ -46,6 +46,7 @@ h1 {
 
 .input-container {
     display: flex;
+    align-items: flex-start;
 }
 
 #user-input {
@@ -53,6 +54,12 @@ h1 {
     padding: 8px;
     border: 1px solid #ccc;
     border-radius: 5px;
+    height: 60px;
+    min-height: 60px;
+    resize: vertical;
+    line-height: 1.4;
+    font-family: inherit;
+    font-size: inherit;
 }
 
 button {

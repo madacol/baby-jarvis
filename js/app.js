@@ -12,7 +12,7 @@ import { initializeDirectoryHandle } from './directoryHandleStore.js';
 
 // Global DOM element references with type annotations
 const chatContainer = /** @type {HTMLDivElement} */ (document.getElementById('chat-container'));
-const userInput = /** @type {HTMLInputElement} */ (document.getElementById('user-input'));
+const userInput = /** @type {HTMLTextAreaElement} */ (document.getElementById('user-input'));
 const sendButton = /** @type {HTMLButtonElement} */ (document.getElementById('send-button'));
 const apiKeyInput = /** @type {HTMLInputElement} */ (document.getElementById('api-key'));
 const saveKeyButton = /** @type {HTMLButtonElement} */ (document.getElementById('save-key'));
