@@ -1,14 +1,14 @@
 /** @type {Action} */
 export default {
-  name: "modifyAction",
-  description: `Modifies an existing action by updating its properties. 
+  name: "updateAction",
+  description: `Update an existing action by updating its properties.
 
-This action allows:
-- Changing the action's name
-- Updating the description
-- Modifying the parameters schema
-- Updating the action function
-- Optionally adding or modifying test functions
+This action allows to update:
+- Action's name
+- Description
+- Parameters schema
+- Action function
+- Test functions
 
 Provides a flexible way to evolve custom actions without completely recreating them.`,
   parameters: {

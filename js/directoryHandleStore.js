@@ -152,8 +152,8 @@ export async function ensureDefaultActionsExist(directoryHandle) {
   
   // Define default action files with their paths
   const defaultActions = [
-    'createActions.js',
-    'modifyAction.js',
+    'createAction.js',
+    'updateAction.js',
     'readAction.js',
     'runJavascript.js',
   ]
