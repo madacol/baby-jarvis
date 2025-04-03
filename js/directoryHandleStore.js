@@ -156,6 +156,7 @@ export async function ensureDefaultActionsExist(directoryHandle) {
     'updateAction.js',
     'readAction.js',
     'runJavascript.js',
+    'openActionEditor.js',
   ]
 
   // For each default action, check if it exists in the selected directory
