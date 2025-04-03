@@ -1627,11 +1627,11 @@ function Fe(e) {
 async function Ae(e, t) {
   let r2;
   if (e && t === "nodefs") {
-    let { NodeFS: a2 } = await __vitePreload(() => import("./nodefs-Bl8fStbE.js"), true ? [] : void 0, import.meta.url);
+    let { NodeFS: a2 } = await __vitePreload(() => import("./nodefs-BwaYvxAk.js"), true ? [] : void 0, import.meta.url);
     r2 = new a2(e);
   } else if (e && t === "idbfs") r2 = new ee(e);
   else if (e && t === "opfs-ahp") {
-    let { OpfsAhpFS: a2 } = await __vitePreload(() => import("./opfs-ahp-k9Ds6GtX.js"), true ? [] : void 0, import.meta.url);
+    let { OpfsAhpFS: a2 } = await __vitePreload(() => import("./opfs-ahp-CiCXpmUb.js"), true ? [] : void 0, import.meta.url);
     r2 = new a2(e);
   } else r2 = new te();
   return r2;
@@ -7340,7 +7340,8 @@ async function ensureDefaultActionsExist(directoryHandle2) {
     "createAction.js",
     "updateAction.js",
     "readAction.js",
-    "runJavascript.js"
+    "runJavascript.js",
+    "openActionEditor.js"
   ];
   for (const actionFile of defaultActions) {
     try {
