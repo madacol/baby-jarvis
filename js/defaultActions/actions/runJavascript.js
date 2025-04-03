@@ -1,13 +1,13 @@
 /** @type {Action} */
 export default {
   name: "runJavascript",
-  description: "Execute arbitrary JavaScript code and return the result. Code must be an arrow function that receives a context object.",
+  description: "Execute arbitrary JavaScript code and return the result. Code must be an arrow function that receives a context object. Use this to validate code before using it in an action.",
   parameters: {
     type: "object",
     properties: {
       code: {
         type: "string",
-        description: "The JavaScript code to execute. Must be an arrow function that accepts a context object that has helpers like `log()` to log extra information, the main answer must be returned form the function. Example: '({log, getActions}) => { return getActions(); }'",
+        description: "The JavaScript code to execute. Must be an arrow function that accepts a context object that has helpers like `log()` to log extra information, the main answer must be returned form the function. Example: '({log, db}) => { log(\"Processing\"); return db.sql(\"SELECT * FROM users\"); }'",
       },
     },
     required: ["code"],
