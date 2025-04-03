@@ -1,10 +1,8 @@
 /** @type {Action} */
 export default {
   name: "createAction",
-  description: `Creates and persistently stores a new custom action in the system that can be reused in future interactions.
-IMPORTANT: This tool should ONLY be executed when the user EXPLICITLY requests to create a new custom action.
-Do not use this proactively or as part of general problem-solving unless the user has specifically asked to 'create an action' or 'make a custom action'.
-When in doubt, ask the user first if they want to create a permanent action rather than executing this tool.`,
+  description: `Creates a new action after having it already tested, working and validated by the user.
+IMPORTANT: This tool should ONLY be executed when the user EXPLICITLY requests to create or make a new action.`,
   parameters: {
     type: "object",
     properties: {

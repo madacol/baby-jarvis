@@ -1627,11 +1627,11 @@ function Fe(e) {
 async function Ae(e, t) {
   let r2;
   if (e && t === "nodefs") {
-    let { NodeFS: a2 } = await __vitePreload(() => import("./nodefs-Dph0I4qU.js"), true ? [] : void 0, import.meta.url);
+    let { NodeFS: a2 } = await __vitePreload(() => import("./nodefs-Bl8fStbE.js"), true ? [] : void 0, import.meta.url);
     r2 = new a2(e);
   } else if (e && t === "idbfs") r2 = new ee(e);
   else if (e && t === "opfs-ahp") {
-    let { OpfsAhpFS: a2 } = await __vitePreload(() => import("./opfs-ahp-VnZcIUZR.js"), true ? [] : void 0, import.meta.url);
+    let { OpfsAhpFS: a2 } = await __vitePreload(() => import("./opfs-ahp-k9Ds6GtX.js"), true ? [] : void 0, import.meta.url);
     r2 = new a2(e);
   } else r2 = new te();
   return r2;
@@ -7329,65 +7329,53 @@ async function getSavedDirectoryHandle() {
   }
 }
 async function ensureDefaultActionsExist(directoryHandle2) {
+  let actionsHandle;
   try {
-    let actionsHandle;
-    try {
-      actionsHandle = await directoryHandle2.getDirectoryHandle("actions", { create: true });
-    } catch (error) {
-      console.error("Error creating actions directory:", error);
-      return;
-    }
-    const defaultActions = [
-      "createActions.js",
-      "modifyAction.js",
-      "readAction.js",
-      "runJs.js"
-    ];
-    for (const actionFile of defaultActions) {
-      try {
-        await actionsHandle.getFileHandle(actionFile);
-        continue;
-      } catch (error) {
-        try {
-          const response = await fetch(`/js/defaultActions/actions/${actionFile}`);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch ${actionFile}`);
-          }
-          const sourceCode = await response.text();
-          const fileHandle = await actionsHandle.getFileHandle(actionFile, { create: true });
-          const writable = await fileHandle.createWritable();
-          await writable.write(sourceCode);
-          await writable.close();
-          console.log(`Created ${actionFile} in the selected directory`);
-        } catch (error2) {
-          console.error(`Error fetching and copying ${actionFile}:`, error2);
-        }
-      }
-    }
+    actionsHandle = await directoryHandle2.getDirectoryHandle("actions", { create: true });
   } catch (error) {
-    console.error("Error ensuring default actions exist:", error);
+    console.error("Error creating actions directory:", error);
+    return;
+  }
+  const defaultActions = [
+    "createAction.js",
+    "updateAction.js",
+    "readAction.js",
+    "runJavascript.js"
+  ];
+  for (const actionFile of defaultActions) {
+    try {
+      await actionsHandle.getFileHandle(actionFile);
+      continue;
+    } catch (error) {
+      const response = await fetch(`/js/defaultActions/actions/${actionFile}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ${actionFile}`);
+      }
+      const sourceCode = await response.text();
+      const fileHandle = await actionsHandle.getFileHandle(actionFile, { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(sourceCode);
+      await writable.close();
+      console.log(`Created ${actionFile} in the selected directory`);
+    }
   }
 }
 async function initializeDirectoryHandle(forceSelect = false) {
   if (!("showDirectoryPicker" in window)) {
     throw new Error("File System Access API not supported in this browser");
   }
-  let directoryHandle2;
-  if (forceSelect) {
-    directoryHandle2 = await window.showDirectoryPicker();
-    await saveDirectoryHandle(directoryHandle2);
-    await ensureDefaultActionsExist(directoryHandle2);
-    return directoryHandle2;
-  }
-  const savedHandle = await getSavedDirectoryHandle();
-  if (savedHandle) {
-    try {
-      await savedHandle.requestPermission({ mode: "readwrite" });
-      return savedHandle;
-    } catch (error) {
+  if (!forceSelect) {
+    const savedHandle = await getSavedDirectoryHandle();
+    if (savedHandle) {
+      try {
+        await savedHandle.requestPermission({ mode: "readwrite" });
+        await ensureDefaultActionsExist(savedHandle);
+        return savedHandle;
+      } catch (error) {
+      }
     }
   }
-  directoryHandle2 = await window.showDirectoryPicker();
+  const directoryHandle2 = await window.showDirectoryPicker();
   await saveDirectoryHandle(directoryHandle2);
   await ensureDefaultActionsExist(directoryHandle2);
   return directoryHandle2;
@@ -7725,7 +7713,7 @@ const chatContainer = (
   document.getElementById("chat-container")
 );
 const userInput = (
-  /** @type {HTMLInputElement} */
+  /** @type {HTMLTextAreaElement} */
   document.getElementById("user-input")
 );
 const sendButton = (
@@ -7826,15 +7814,20 @@ function updateToolParams(toolElement, input) {
     }
   }
 }
-const systemPrompt = `You are Baby Jarvis, a helpful AI assistant that can use tools to accomplish tasks.
-You can create and use JavaScript tools to help users solve problems.
+const systemPrompt = `You are Baby Jarvis, a helpful AI assistant that can execute actions to satisfy user requests.
+Use the \`runJavascript\` action to do any new tasks that doesn't have a specific action.
+You can run javascript typechecked using JSDoc to help answer questions.
+
+When I ask you to demonstrate something, never create an action immediately. Instead:
+1. First, use \`runJavascript\` to show the implementation
+2. Only create an action if I explicitly say 'create an action for this' or 'make this an action'
 
 IMPORTANT: 
-1. When writing JavaScript code, you MUST always use arrow functions that receive a context parameter.
-2. You have access to a context parameter, which has the following properties:
-- context.log: Log messages
-- context.db: A PGlite database instance, prefer using \`db.sql\`...\`\`\` to execute queries
-- context.directoryHandle: Access the file system
+When writing JavaScript code, you MUST always use arrow functions that receive a context parameter, that context parameter has the following properties:
+- context.log: A function to add messages to the UI for the user to see.
+- context.db: A PGlite database instance, use \`db.sql\`...\`\` to execute queries. Each action has its own database instance.
+- context.directoryHandle: Access a user-selected directory where you can read and write files.
+- context.getActions: A function to get all actions that have been created.
 
 Example of correct code:
 \`\`\`javascript
@@ -7925,7 +7918,11 @@ async function handleStreamEvent(event) {
       content_blocks.delete(event.index);
       const lastMessage = messageHistory.at(-1);
       if (!lastMessage) throw new Error("No last message found");
-      lastMessage.content[event.index] = toolContent;
+      if (lastMessage.role !== "assistant") {
+        messageHistory.push({ role: "assistant", content: [toolContent] });
+      } else {
+        lastMessage.content[event.index] = toolContent;
+      }
       let parsedInput;
       try {
         parsedInput = JSON.parse(toolContent.input_string);
