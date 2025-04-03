@@ -198,38 +198,24 @@ export async function initializeDirectoryHandle(forceSelect = false) {
     throw new Error('File System Access API not supported in this browser');
   }
 
-  let directoryHandle;
-
-  // If forceSelect is true or no directoryHandle is available, ask user to select one
-  if (forceSelect) {
-    // Ask user to select a directory
-    directoryHandle = await window.showDirectoryPicker();
+  // If forceSelect is false, try to get the saved directory handle
+  if (!forceSelect) {
+    // Try to get the saved directory handle
+    const savedHandle = await getSavedDirectoryHandle();
     
-    // Save the new handle to IndexedDB
-    await saveDirectoryHandle(directoryHandle);
-    
-    // Ensure default actions exist in the selected directory
-    await ensureDefaultActionsExist(directoryHandle);
-    
-    return directoryHandle;
-  }
-
-  // Try to get the saved directory handle
-  const savedHandle = await getSavedDirectoryHandle();
-  
-  if (savedHandle) {
-    try {
-      // Verify the handle is still valid (this will throw if permission is revoked)
-      // @ts-ignore - TypeScript doesn't know about this method
-      await savedHandle.requestPermission({ mode: 'readwrite' });
-      return savedHandle;
-    } catch (error) {
-      // Permission revoked or handle invalid, we'll get a new one
+    if (savedHandle) {
+      try {
+        // Verify the handle is still valid (this will throw if permission is revoked)
+        await savedHandle.requestPermission({ mode: 'readwrite' });
+        await ensureDefaultActionsExist(savedHandle);
+        return savedHandle;
+      } catch (error) {
+        // Permission revoked or handle invalid, we'll get a new one
+      }
     }
   }
-  
-  // If we get here, we need to ask for a new directory
-  directoryHandle = await window.showDirectoryPicker();
+  // Ask user to select a directory
+  const directoryHandle = await window.showDirectoryPicker();
   
   // Save the new handle to IndexedDB
   await saveDirectoryHandle(directoryHandle);
