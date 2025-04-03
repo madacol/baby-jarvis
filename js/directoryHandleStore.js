@@ -141,57 +141,49 @@ export async function getSavedDirectoryHandle() {
  * @returns {Promise<void>}
  */
 export async function ensureDefaultActionsExist(directoryHandle) {
+  // Create the actions directory if it doesn't exist
+  let actionsHandle;
   try {
-    // Create the actions directory if it doesn't exist
-    let actionsHandle;
-    try {
-      actionsHandle = await directoryHandle.getDirectoryHandle('actions', { create: true });
-    } catch (error) {
-      console.error('Error creating actions directory:', error);
-      return;
-    }
-    
-    // Define default action files with their paths
-    const defaultActions = [
-      'createActions.js',
-      'modifyAction.js',
-      'readAction.js',
-      'runJs.js',
-    ]
-
-    // For each default action, check if it exists in the selected directory
-    for (const actionFile of defaultActions) {
-      
-      // Check if the action file exists in the selected directory
-      try {
-        await actionsHandle.getFileHandle(actionFile);
-        // If the action exists, do nothing
-        continue;
-      } catch (error) {
-        // If the action doesn't exist, fetch it and write it to the selected directory
-        try {
-          // Fetch the source code of the action
-          const response = await fetch(`/js/defaultActions/actions/${actionFile}`);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch ${actionFile}`);
-          }
-          const sourceCode = await response.text();
-          
-          // Create the file in the selected directory with the source code
-          const fileHandle = await actionsHandle.getFileHandle(actionFile, { create: true });
-          const writable = await fileHandle.createWritable();
-          
-          await writable.write(sourceCode);
-          await writable.close();
-          
-          console.log(`Created ${actionFile} in the selected directory`);
-        } catch (error) {
-          console.error(`Error fetching and copying ${actionFile}:`, error);
-        }
-      }
-    }
+    actionsHandle = await directoryHandle.getDirectoryHandle('actions', { create: true });
   } catch (error) {
-    console.error('Error ensuring default actions exist:', error);
+    console.error('Error creating actions directory:', error);
+    return;
+  }
+  
+  // Define default action files with their paths
+  const defaultActions = [
+    'createActions.js',
+    'modifyAction.js',
+    'readAction.js',
+    'runJs.js',
+  ]
+
+  // For each default action, check if it exists in the selected directory
+  for (const actionFile of defaultActions) {
+    
+    // Check if the action file exists in the selected directory
+    try {
+      await actionsHandle.getFileHandle(actionFile);
+      // If the action exists, do nothing
+      continue;
+    } catch (error) {
+      // If the action doesn't exist, fetch it and write it to the selected directory
+      // Fetch the source code of the action
+      const response = await fetch(`/js/defaultActions/actions/${actionFile}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ${actionFile}`);
+      }
+      const sourceCode = await response.text();
+      
+      // Create the file in the selected directory with the source code
+      const fileHandle = await actionsHandle.getFileHandle(actionFile, { create: true });
+      const writable = await fileHandle.createWritable();
+      
+      await writable.write(sourceCode);
+      await writable.close();
+      
+      console.log(`Created ${actionFile} in the selected directory`);
+    }
   }
 }
 
