@@ -266,7 +266,11 @@ async function handleStreamEvent(event) {
 
       const lastMessage = messageHistory.at(-1);
       if (!lastMessage) throw new Error('No last message found');
-      lastMessage.content[event.index] = toolContent;
+      if (lastMessage.role !== 'assistant') {
+        messageHistory.push({ role: 'assistant', content: [toolContent] });
+      } else {
+        lastMessage.content[event.index] = toolContent;
+      }
       
       let parsedInput;
       try {
