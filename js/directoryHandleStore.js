@@ -261,7 +261,7 @@ export async function ensureDefaultActionsExist(directoryHandle) {
     } catch (error) {
       // If the action doesn't exist, fetch it and write it to the selected directory
       // Fetch the source code of the action
-      const response = await fetch(`/js/defaultActions/actions/${actionFile}`);
+      const response = await fetch(`./js/defaultActions/actions/${actionFile}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch ${actionFile}`);
       }
