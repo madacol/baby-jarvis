@@ -100,6 +100,7 @@ export default {
 
       // Create container div
       const containerDiv = document.createElement('div');
+      containerDiv.id = 'monaco';
       containerDiv.style.display = 'flex';
       containerDiv.style.flexDirection = 'column';
 
@@ -126,7 +127,6 @@ export default {
 
       // Create Monaco container
       const monacoDiv = document.createElement('div');
-      monacoDiv.id = 'monaco';
       monacoDiv.style.height = '400px';
       monacoDiv.style.width = '100%';
       monacoDiv.style.border = '1px solid grey';
