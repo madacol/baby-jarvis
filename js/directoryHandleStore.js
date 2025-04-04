@@ -3,6 +3,7 @@
  * 
  * This module provides functionality to save and retrieve a directory handle
  * using IndexedDB for persistence across sessions.
+ * Falls back to Origin Private File System (OPFS) when File System Access API is not available.
  */
 
 // Constants for IndexedDB
@@ -10,6 +11,10 @@ const DB_NAME = 'baby-jarvis-db';
 const DB_VERSION = 1;
 const STORE_NAME = 'app-settings';
 const DIR_HANDLE_KEY = 'directoryHandle';
+const USING_OPFS_KEY = 'usingOPFS';
+
+// Flag to track if we're using OPFS as fallback
+let isUsingOPFS = false;
 
 /**
  * Open the IndexedDB database
@@ -50,16 +55,75 @@ async function openDatabase() {
 }
 
 /**
+ * Checks if the Origin Private File System (OPFS) is available
+ * @returns {Promise<boolean>} Whether OPFS is available
+ */
+export async function isOPFSAvailable() {
+  try {
+    // Check if the navigator.storage.getDirectory() method exists
+    return typeof navigator?.storage?.getDirectory === 'function';
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Get the OPFS root directory handle
+ * @returns {Promise<FileSystemDirectoryHandle>} The OPFS root directory handle
+ */
+export async function getOPFSRoot() {
+  if (!await isOPFSAvailable()) {
+    throw new Error('Origin Private File System is not available in this browser');
+  }
+  try {
+    return await navigator.storage.getDirectory();
+  } catch (error) {
+    if (error.name === 'SecurityError') {
+      throw new Error('OPFS is not available in this browser');
+    }
+    throw new Error('Failed to get OPFS root directory handle');
+  }
+}
+
+/**
+ * Creates a wrapper around OPFS that mimics the File System Access API
+ * @returns {Promise<FileSystemDirectoryHandle>} An object with similar methods to FileSystemDirectoryHandle
+ */
+export async function createOPFSWrapper() {
+  const root = await getOPFSRoot();
+  
+  // Create our app directory structure in OPFS
+  let appRoot;
+  try {
+    appRoot = await root.getDirectoryHandle('baby-jarvis', { create: true });
+  } catch (error) {
+    console.error('Failed to create baby-jarvis directory in OPFS:', error);
+    throw error;
+  }
+  
+  // Store that we're using OPFS
+  const db = await openDatabase();
+  const transaction = db.transaction(STORE_NAME, 'readwrite');
+  const store = transaction.objectStore(STORE_NAME);
+  await new Promise((resolve, reject) => {
+    const request = store.put(true, USING_OPFS_KEY);
+    request.onsuccess = resolve;
+    request.onerror = reject;
+  });
+  
+  isUsingOPFS = true;
+  return appRoot;
+}
+
+/**
  * Save the directory handle to IndexedDB
  * @param {FileSystemDirectoryHandle} handle - The directory handle to save
  * @returns {Promise<void>}
  */
 export async function saveDirectoryHandle(handle) {
   try {
-    // Get permission to persist the handle
-    // @ts-ignore - requestPermission exists on FileSystemHandle but TypeScript doesn't know about it
-    if (handle.requestPermission) {
-      // @ts-ignore - TypeScript doesn't know about this method
+    // If we're using OPFS, we don't need to request permission
+    if (!isUsingOPFS && handle.requestPermission) {
       const permission = await handle.requestPermission({ mode: 'readwrite' });
       if (permission !== 'granted') {
         return;
@@ -102,6 +166,33 @@ export async function saveDirectoryHandle(handle) {
 export async function getSavedDirectoryHandle() {
   try {
     const db = await openDatabase();
+    
+    // Check if we're using OPFS
+    const isUsingOPFSStored = await new Promise((resolve) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.get(USING_OPFS_KEY);
+      
+      request.onsuccess = (event) => {
+        const target = event.target;
+        if (target instanceof IDBRequest) {
+          resolve(target.result || false);
+        } else {
+          resolve(false);
+        }
+      };
+      
+      request.onerror = () => resolve(false);
+    });
+    
+    if (isUsingOPFSStored) {
+      isUsingOPFS = true;
+      // If we're using OPFS, get the root OPFS directory
+      return await getOPFSRoot().then(root => 
+        root.getDirectoryHandle('baby-jarvis', { create: false })
+      ).catch(() => null);
+    }
+    
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORE_NAME, 'readonly');
       const store = transaction.objectStore(STORE_NAME);
@@ -190,15 +281,20 @@ export async function ensureDefaultActionsExist(directoryHandle) {
 
 /**
  * Initialize the directory handle from IndexedDB or ask user to select one
+ * Falls back to OPFS if File System Access API is not available
  * @param {boolean} forceSelect - Force the user to select a directory even if one is saved
  * @returns {Promise<FileSystemDirectoryHandle>} The directory handle
  */
 export async function initializeDirectoryHandle(forceSelect = false) {
-  // Check if File System Access API is supported
-  if (!('showDirectoryPicker' in window)) {
-    throw new Error('File System Access API not supported in this browser');
+  // First check if File System Access API is supported
+  const hasFileSystemAccess = 'showDirectoryPicker' in window;
+  const hasOPFS = await isOPFSAvailable();
+  
+  // If neither API is available, throw an error
+  if (!hasFileSystemAccess && !hasOPFS) {
+    throw new Error('Neither File System Access API nor Origin Private File System are supported in this browser');
   }
-
+  
   // If forceSelect is false, try to get the saved directory handle
   if (!forceSelect) {
     // Try to get the saved directory handle
@@ -206,8 +302,10 @@ export async function initializeDirectoryHandle(forceSelect = false) {
     
     if (savedHandle) {
       try {
-        // Verify the handle is still valid (this will throw if permission is revoked)
-        await savedHandle.requestPermission({ mode: 'readwrite' });
+        if (!isUsingOPFS && savedHandle.requestPermission) {
+          // Verify the handle is still valid (this will throw if permission is revoked)
+          await savedHandle.requestPermission({ mode: 'readwrite' });
+        }
         await ensureDefaultActionsExist(savedHandle);
         return savedHandle;
       } catch (error) {
@@ -215,8 +313,21 @@ export async function initializeDirectoryHandle(forceSelect = false) {
       }
     }
   }
-  // Ask user to select a directory
-  const directoryHandle = await window.showDirectoryPicker();
+  
+  let directoryHandle;
+  
+  // If File System Access API is available and we're not already using OPFS, use it
+  if (hasFileSystemAccess && !isUsingOPFS) {
+    directoryHandle = await window.showDirectoryPicker();
+  } 
+  // Otherwise fall back to OPFS
+  else if (hasOPFS) {
+    console.log('Using Origin Private File System as fallback');
+    directoryHandle = await createOPFSWrapper();
+  }
+  else {
+    throw new Error('Neither File System Access API nor Origin Private File System are supported in this browser');
+  }
   
   // Save the new handle to IndexedDB
   await saveDirectoryHandle(directoryHandle);
