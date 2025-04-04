@@ -21,6 +21,10 @@ export default {
     }
 
     // Function to load a script
+    /**
+     * @param {string} src
+     * @returns {Promise<void>}
+     */
     const loadScript = (src) => {
       return new Promise((resolve, reject) => {
         if (document.querySelector(`script[src="${src}"]`)) {
@@ -29,13 +33,17 @@ export default {
         }
         const script = document.createElement('script');
         script.src = src;
-        script.onload = resolve;
-        script.onerror = reject;
+        script.onload = ()=>resolve();
+        script.onerror = ()=>reject();
         document.body.appendChild(script);
       });
     };
 
     // Function to load a stylesheet
+    /**
+     * @param {string} href
+     * @returns {Promise<void>}
+     */
     const loadStyle = (href) => {
       return new Promise((resolve, reject) => {
         if (document.querySelector(`link[href="${href}"]`)) {
@@ -45,14 +53,17 @@ export default {
         const link = document.createElement('link');
         link.href = href;
         link.rel = 'stylesheet';
-        link.onload = resolve;
-        link.onerror = reject;
+        link.onload = ()=>resolve();
+        link.onerror = ()=>reject();
         document.head.appendChild(link);
       });
     };
 
+    /** @type {Window & typeof globalThis & { monaco?: any, require?: any }} */
+    const win = window;
+
     // Ensure Monaco resources are loaded
-    if (typeof monaco === 'undefined') {
+    if (typeof win.monaco === 'undefined') {
       log('Loading Monaco Editor resources...');
       
       // Load Monaco loader
@@ -63,13 +74,13 @@ export default {
 
       // Configure Monaco loader
       return new Promise((resolve, reject) => {
-        window.require.config({ 
+        win.require.config({
           paths: { 
             vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs' 
           } 
         });
         
-        window.require(['vs/editor/editor.main'], () => {
+        win.require(['vs/editor/editor.main'], () => {
           log('Monaco Editor loaded successfully');
           resolve(initEditor());
         }, reject);
@@ -142,7 +153,7 @@ export default {
       titleSpan.textContent = `Editing: ${fileName}`;
 
       // Create Monaco editor
-      const editor = monaco.editor.create(monacoDiv, {
+      const editor = win.monaco.editor.create(monacoDiv, {
         value: fileContent,
         language: 'javascript',
         theme: 'vs-dark',
