@@ -1627,11 +1627,11 @@ function Fe(e) {
 async function Ae(e, t) {
   let r2;
   if (e && t === "nodefs") {
-    let { NodeFS: a2 } = await __vitePreload(() => import("./nodefs-BwaYvxAk.js"), true ? [] : void 0, import.meta.url);
+    let { NodeFS: a2 } = await __vitePreload(() => import("./nodefs-CB0_Ae9F.js"), true ? [] : void 0, import.meta.url);
     r2 = new a2(e);
   } else if (e && t === "idbfs") r2 = new ee(e);
   else if (e && t === "opfs-ahp") {
-    let { OpfsAhpFS: a2 } = await __vitePreload(() => import("./opfs-ahp-CiCXpmUb.js"), true ? [] : void 0, import.meta.url);
+    let { OpfsAhpFS: a2 } = await __vitePreload(() => import("./opfs-ahp-B7RLeCNH.js"), true ? [] : void 0, import.meta.url);
     r2 = new a2(e);
   } else r2 = new te();
   return r2;
@@ -7235,6 +7235,8 @@ const DB_NAME = "baby-jarvis-db";
 const DB_VERSION = 1;
 const STORE_NAME = "app-settings";
 const DIR_HANDLE_KEY = "directoryHandle";
+const USING_OPFS_KEY = "usingOPFS";
+let isUsingOPFS = false;
 async function openDatabase() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -7265,9 +7267,42 @@ async function openDatabase() {
     };
   });
 }
+async function isOPFSAvailable() {
+  try {
+    return typeof navigator !== "undefined" && navigator.storage && typeof navigator.storage.getDirectory === "function";
+  } catch (e) {
+    return false;
+  }
+}
+async function getOPFSRoot() {
+  if (!await isOPFSAvailable()) {
+    throw new Error("Origin Private File System is not available in this browser");
+  }
+  return await navigator.storage.getDirectory();
+}
+async function createOPFSWrapper() {
+  const root = await getOPFSRoot();
+  let appRoot;
+  try {
+    appRoot = await root.getDirectoryHandle("baby-jarvis", { create: true });
+  } catch (error) {
+    console.error("Failed to create baby-jarvis directory in OPFS:", error);
+    throw error;
+  }
+  const db = await openDatabase();
+  const transaction = db.transaction(STORE_NAME, "readwrite");
+  const store = transaction.objectStore(STORE_NAME);
+  await new Promise((resolve, reject) => {
+    const request = store.put(true, USING_OPFS_KEY);
+    request.onsuccess = resolve;
+    request.onerror = reject;
+  });
+  isUsingOPFS = true;
+  return appRoot;
+}
 async function saveDirectoryHandle(handle2) {
   try {
-    if (handle2.requestPermission) {
+    if (!isUsingOPFS && handle2.requestPermission) {
       const permission = await handle2.requestPermission({ mode: "readwrite" });
       if (permission !== "granted") {
         return;
@@ -7300,6 +7335,26 @@ async function saveDirectoryHandle(handle2) {
 async function getSavedDirectoryHandle() {
   try {
     const db = await openDatabase();
+    const isUsingOPFSStored = await new Promise((resolve) => {
+      const transaction = db.transaction(STORE_NAME, "readonly");
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.get(USING_OPFS_KEY);
+      request.onsuccess = (event) => {
+        const target = event.target;
+        if (target instanceof IDBRequest) {
+          resolve(target.result || false);
+        } else {
+          resolve(false);
+        }
+      };
+      request.onerror = () => resolve(false);
+    });
+    if (isUsingOPFSStored) {
+      isUsingOPFS = true;
+      return await getOPFSRoot().then(
+        (root) => root.getDirectoryHandle("baby-jarvis", { create: false })
+      ).catch(() => null);
+    }
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORE_NAME, "readonly");
       const store = transaction.objectStore(STORE_NAME);
@@ -7362,21 +7417,33 @@ async function ensureDefaultActionsExist(directoryHandle2) {
   }
 }
 async function initializeDirectoryHandle(forceSelect = false) {
-  if (!("showDirectoryPicker" in window)) {
-    throw new Error("File System Access API not supported in this browser");
+  const hasFileSystemAccess = "showDirectoryPicker" in window;
+  const hasOPFS = await isOPFSAvailable();
+  if (!hasFileSystemAccess && !hasOPFS) {
+    throw new Error("Neither File System Access API nor Origin Private File System are supported in this browser");
   }
   if (!forceSelect) {
     const savedHandle = await getSavedDirectoryHandle();
     if (savedHandle) {
       try {
-        await savedHandle.requestPermission({ mode: "readwrite" });
+        if (!isUsingOPFS && savedHandle.requestPermission) {
+          await savedHandle.requestPermission({ mode: "readwrite" });
+        }
         await ensureDefaultActionsExist(savedHandle);
         return savedHandle;
       } catch (error) {
       }
     }
   }
-  const directoryHandle2 = await window.showDirectoryPicker();
+  let directoryHandle2;
+  if (hasFileSystemAccess && !isUsingOPFS) {
+    directoryHandle2 = await window.showDirectoryPicker();
+  } else if (hasOPFS) {
+    console.log("Using Origin Private File System as fallback");
+    directoryHandle2 = await createOPFSWrapper();
+  } else {
+    throw new Error("Neither File System Access API nor Origin Private File System are supported in this browser");
+  }
   await saveDirectoryHandle(directoryHandle2);
   await ensureDefaultActionsExist(directoryHandle2);
   return directoryHandle2;
