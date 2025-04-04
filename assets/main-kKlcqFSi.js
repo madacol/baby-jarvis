@@ -1627,11 +1627,11 @@ function Fe(e) {
 async function Ae(e, t) {
   let r2;
   if (e && t === "nodefs") {
-    let { NodeFS: a2 } = await __vitePreload(() => import("./nodefs-CB0_Ae9F.js"), true ? [] : void 0, import.meta.url);
+    let { NodeFS: a2 } = await __vitePreload(() => import("./nodefs-_8RLIZXJ.js"), true ? [] : void 0, import.meta.url);
     r2 = new a2(e);
   } else if (e && t === "idbfs") r2 = new ee(e);
   else if (e && t === "opfs-ahp") {
-    let { OpfsAhpFS: a2 } = await __vitePreload(() => import("./opfs-ahp-B7RLeCNH.js"), true ? [] : void 0, import.meta.url);
+    let { OpfsAhpFS: a2 } = await __vitePreload(() => import("./opfs-ahp-DRnUcOIf.js"), true ? [] : void 0, import.meta.url);
     r2 = new a2(e);
   } else r2 = new te();
   return r2;
@@ -7269,7 +7269,7 @@ async function openDatabase() {
 }
 async function isOPFSAvailable() {
   try {
-    return typeof navigator !== "undefined" && navigator.storage && typeof navigator.storage.getDirectory === "function";
+    return typeof navigator?.storage?.getDirectory === "function";
   } catch (e) {
     return false;
   }
@@ -7403,7 +7403,7 @@ async function ensureDefaultActionsExist(directoryHandle2) {
       await actionsHandle.getFileHandle(actionFile);
       continue;
     } catch (error) {
-      const response = await fetch(`/js/defaultActions/actions/${actionFile}`);
+      const response = await fetch(`./js/defaultActions/actions/${actionFile}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch ${actionFile}`);
       }
