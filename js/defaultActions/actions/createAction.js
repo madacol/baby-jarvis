@@ -25,12 +25,6 @@ IMPORTANT: This tool should ONLY be executed when the user EXPLICITLY requests t
    * @param {{name: string, description: string, parameters: object, action_function: string, test_functions?: string[]}} params - The action object
    */
   action_fn: async function createAction(context, {name, description, parameters, action_function, test_functions}) {
-
-    // Check if File System Access API is supported
-    if (!('showDirectoryPicker' in window)) {
-      throw new Error('File System Access API not supported in this browser');
-    }
-    
     const directoryHandle = context.directoryHandle;
     if (!directoryHandle) {
       throw new Error('A directory has not been set for this app');
