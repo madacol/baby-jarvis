@@ -277,14 +277,18 @@ async function handleStreamEvent(event) {
         lastMessage.content[event.index] = toolContent;
       }
       
-      let parsedInput;
-      try {
-        parsedInput = JSON.parse(toolContent.input_string);
-      } catch (e) {
-        updateToolWithResult(toolContent.element, e.message, false);
-        AddToolToHistory(event.index, toolContent);
-        messageHistory.push({ role: 'tool', content: [{ type: 'tool_result', tool_use_id: toolContent.id, content: e.message, is_error: true }] });
-        break;
+      let parsedInput = {};
+      if (toolContent.input_string) {
+        try {
+          parsedInput = JSON.parse(toolContent.input_string);
+        } catch (e) {
+          console.error('Error parsing input:', e);
+          console.log({input_string: toolContent.input_string});
+          updateToolWithResult(toolContent.element, e.message, false);
+          AddToolToHistory(event.index, toolContent);
+          messageHistory.push({ role: 'tool', content: [{ type: 'tool_result', tool_use_id: toolContent.id, content: e.message, is_error: true }] });
+          break;
+        }
       }
       toolContent.input = parsedInput;
       AddToolToHistory(event.index, toolContent);
