@@ -12,6 +12,9 @@ export default {
     },
     required: ["code"],
   },
+  permissions: {
+    autoExecute: true
+  },
   /**
    * Run JavaScript code
    * @param {Context} context - The context object

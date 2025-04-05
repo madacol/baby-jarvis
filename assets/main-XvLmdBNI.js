@@ -1627,11 +1627,11 @@ function Fe(e) {
 async function Ae(e, t) {
   let r2;
   if (e && t === "nodefs") {
-    let { NodeFS: a2 } = await __vitePreload(() => import("./nodefs-_8RLIZXJ.js"), true ? [] : void 0, import.meta.url);
+    let { NodeFS: a2 } = await __vitePreload(() => import("./nodefs-BFrVhCle.js"), true ? [] : void 0, import.meta.url);
     r2 = new a2(e);
   } else if (e && t === "idbfs") r2 = new ee(e);
   else if (e && t === "opfs-ahp") {
-    let { OpfsAhpFS: a2 } = await __vitePreload(() => import("./opfs-ahp-DRnUcOIf.js"), true ? [] : void 0, import.meta.url);
+    let { OpfsAhpFS: a2 } = await __vitePreload(() => import("./opfs-ahp-Caoeu7AA.js"), true ? [] : void 0, import.meta.url);
     r2 = new a2(e);
   } else r2 = new te();
   return r2;
@@ -7278,7 +7278,14 @@ async function getOPFSRoot() {
   if (!await isOPFSAvailable()) {
     throw new Error("Origin Private File System is not available in this browser");
   }
-  return await navigator.storage.getDirectory();
+  try {
+    return await navigator.storage.getDirectory();
+  } catch (error) {
+    if (error.name === "SecurityError") {
+      throw new Error("OPFS is not available in this browser");
+    }
+    throw new Error("Failed to get OPFS root directory handle");
+  }
 }
 async function createOPFSWrapper() {
   const root = await getOPFSRoot();
@@ -7396,7 +7403,8 @@ async function ensureDefaultActionsExist(directoryHandle2) {
     "updateAction.js",
     "readAction.js",
     "runJavascript.js",
-    "openActionEditor.js"
+    "openActionEditor.js",
+    "showHackerNews.js"
   ];
   for (const actionFile of defaultActions) {
     try {
@@ -7460,9 +7468,12 @@ async function executeAction(actionName, input) {
     directoryHandle,
     getActions
   };
-  if (!action.permissions?.requires_confirmation) {
+  if (!action.permissions?.autoExecute) {
     try {
-      return await action.action_fn(context, input);
+      return {
+        result: await action.action_fn(context, input),
+        permissions: action.permissions
+      };
     } catch (error) {
       console.error(`Error executing action ${actionName}:`, error);
       throw error;
@@ -7485,7 +7496,10 @@ async function executeAction(actionName, input) {
         buttonsContainer.parentNode.removeChild(buttonsContainer);
       }
       try {
-        resolve(await action.action_fn(context, input));
+        resolve({
+          result: await action.action_fn(context, input),
+          permissions: action.permissions
+        });
       } catch (error) {
         console.error(`Error executing action ${actionName}:`, error);
         reject(error);
@@ -7882,8 +7896,8 @@ function updateToolParams(toolElement, input) {
     }
   }
 }
-const systemPrompt = `You are Baby Jarvis, a helpful AI assistant that can execute actions to satisfy user requests.
-Use the \`runJavascript\` action to do any new tasks that doesn't have a specific action.
+const systemPrompt = `You are Baby Jarvis, a helpful AI assistant that can execute javascript code to satisfy user requests.
+Use the \`runJavascript\` action for any new task.
 You can run javascript typechecked using JSDoc to help answer questions.
 
 When I ask you to demonstrate something, never create an action immediately. Instead:
@@ -7991,32 +8005,41 @@ async function handleStreamEvent(event) {
       } else {
         lastMessage.content[event.index] = toolContent;
       }
-      let parsedInput;
-      try {
-        parsedInput = JSON.parse(toolContent.input_string);
-      } catch (e) {
-        updateToolWithResult(toolContent.element, e.message, false);
-        AddToolToHistory(event.index, toolContent);
-        messageHistory.push({ role: "tool", content: [{ type: "tool_result", tool_use_id: toolContent.id, content: e.message, is_error: true }] });
-        break;
+      let parsedInput = {};
+      if (toolContent.input_string) {
+        try {
+          parsedInput = JSON.parse(toolContent.input_string);
+        } catch (e) {
+          console.error("Error parsing input:", e);
+          console.log({ input_string: toolContent.input_string });
+          updateToolWithResult(toolContent.element, e.message, false);
+          AddToolToHistory(event.index, toolContent);
+          messageHistory.push({ role: "tool", content: [{ type: "tool_result", tool_use_id: toolContent.id, content: e.message, is_error: true }] });
+          break;
+        }
       }
       toolContent.input = parsedInput;
       AddToolToHistory(event.index, toolContent);
+      let shouldLLMInterpretResult = false;
       try {
-        const result = await executeAction(toolContent.name, parsedInput);
+        const { result, permissions } = await executeAction(toolContent.name, parsedInput);
+        shouldLLMInterpretResult = !!permissions?.autoContinue;
         updateToolWithResult(toolContent.element, result, true);
         messageHistory.push({ role: "tool", content: [{ type: "tool_result", tool_use_id: toolContent.id, content: JSON.stringify(result) }] });
       } catch (e) {
-        updateToolWithResult(toolContent.element, e.message, false);
+        shouldLLMInterpretResult = true;
         console.error("Error executing action:", e);
+        updateToolWithResult(toolContent.element, e.message, false);
         messageHistory.push({ role: "tool", content: [{ type: "tool_result", tool_use_id: toolContent.id, content: e.message, is_error: true }] });
       }
-      sendMessage({
-        messages: messageHistory,
-        systemPrompt,
-        actions: await getActions(),
-        onEvent: handleStreamEvent
-      });
+      if (shouldLLMInterpretResult) {
+        sendMessage({
+          messages: messageHistory,
+          systemPrompt,
+          actions: await getActions(),
+          onEvent: handleStreamEvent
+        });
+      }
       break;
     }
     case "content_block_stop": {

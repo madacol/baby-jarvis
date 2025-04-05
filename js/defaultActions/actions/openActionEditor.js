@@ -14,6 +14,10 @@ export default {
       "actionName"
     ]
   },
+  permissions: {
+    autoExecute: true,
+    autoContinue: false
+  },
   action_fn: async ({log, directoryHandle}, {actionName}) => {
     // Validate directoryHandle
     if (!directoryHandle) {
