@@ -155,8 +155,8 @@ function updateToolParams(toolElement, input) {
 }
 
 // Define system prompt
-const systemPrompt = `You are Baby Jarvis, a helpful AI assistant that can execute actions to satisfy user requests.
-Use the \`runJavascript\` action to do any new tasks that doesn't have a specific action.
+const systemPrompt = `You are Baby Jarvis, a helpful AI assistant that can execute javascript code to satisfy user requests.
+Use the \`runJavascript\` action for any new task.
 You can run javascript typechecked using JSDoc to help answer questions.
 
 When I ask you to demonstrate something, never create an action immediately. Instead:
