@@ -5,7 +5,7 @@ import { initializeDirectoryHandle } from './directoryHandleStore.js';
  * Execute a custom action
  * @param {string} actionName - The name of the action to execute
  * @param {{}} input - The input to pass to the action
- * @returns {Promise<any>} Result of the action execution
+ * @returns {Promise<{result: any, permissions: Action['permissions']}>} Result of the action execution
  */
 export async function executeAction(actionName, input) {
   const action = await getAction(actionName);
@@ -22,9 +22,12 @@ export async function executeAction(actionName, input) {
   }
 
   // If the action doesn't require confirmation, execute it immediately
-  if (!action.permissions?.requires_confirmation) {
+  if (!action.permissions?.autoExecute) {
     try {
-      return await action.action_fn(context, input);
+      return {
+        result: await action.action_fn(context, input),
+        permissions: action.permissions
+      };
     } catch (error) {
       console.error(`Error executing action ${actionName}:`, error);
       throw error;
@@ -55,7 +58,10 @@ export async function executeAction(actionName, input) {
       }
       
       try {
-        resolve(await action.action_fn(context, input));
+        resolve({
+          result: await action.action_fn(context, input),
+          permissions: action.permissions
+        });
       } catch (error) {
         console.error(`Error executing action ${actionName}:`, error);
         reject(error);

@@ -292,22 +292,26 @@ async function handleStreamEvent(event) {
       }
       toolContent.input = parsedInput;
       AddToolToHistory(event.index, toolContent);
+      let shouldLLMInterpretResult = false;
       try {
-        const result = await executeAction(toolContent.name, parsedInput);
+        const {result, permissions} = await executeAction(toolContent.name, parsedInput);
+        shouldLLMInterpretResult = !!permissions?.autoContinue;
         updateToolWithResult(toolContent.element, result, true);
         messageHistory.push({ role: 'tool', content: [{ type: 'tool_result', tool_use_id: toolContent.id, content: JSON.stringify(result) }] });
       } catch (e) {
-        updateToolWithResult(toolContent.element, e.message, false);
+        shouldLLMInterpretResult = true;
         console.error('Error executing action:', e);
+        updateToolWithResult(toolContent.element, e.message, false);
         messageHistory.push({ role: 'tool', content: [{ type: 'tool_result', tool_use_id: toolContent.id, content: e.message, is_error: true }] });
       }
-
-      sendMessage({
-        messages: messageHistory,
-        systemPrompt,
-        actions: await getActions(),
-        onEvent: handleStreamEvent
-      });
+      if (shouldLLMInterpretResult) {
+        sendMessage({
+          messages: messageHistory,
+          systemPrompt,
+          actions: await getActions(),
+          onEvent: handleStreamEvent
+        });
+      }
       break;
     }
     case 'content_block_stop': {

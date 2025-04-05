@@ -19,9 +19,6 @@ IMPORTANT: This tool should ONLY be executed when the user EXPLICITLY requests t
     },
     required: ["name", "description", "parameters", "action_function"],
   },
-  permissions: {
-    requires_confirmation: true
-  },
   /**
    * Create a new action within an app
    * @param {Context} context - The context object

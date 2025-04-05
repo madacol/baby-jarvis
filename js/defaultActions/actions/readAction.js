@@ -14,6 +14,9 @@ export default {
     "actionName"
   ]
 },
+permissions: {
+  autoExecute: true
+},
   action_fn: async ({log, directoryHandle}, params) => {
   try {
     const { actionName } = params;
