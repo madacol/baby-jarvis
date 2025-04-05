@@ -19,7 +19,7 @@ export default {
     const topStoryIds = await topStoriesResponse.json();
     
     // Fetch details for top stories
-    const storyPromises = topStoryIds.map(async (id) => {
+    const storyPromises = topStoryIds.slice(0, 30).map(async (id) => {
       const storyResponse = await fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`);
       return storyResponse.json();
     });
