@@ -248,6 +248,7 @@ export async function ensureDefaultActionsExist(directoryHandle) {
     'readAction.js',
     'runJavascript.js',
     'openActionEditor.js',
+    'showHackerNews.js',
   ]
 
   // For each default action, check if it exists in the selected directory
