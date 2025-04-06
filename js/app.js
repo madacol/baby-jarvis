@@ -30,15 +30,15 @@ const autoScroll = (() => {
   let shouldAutoScroll = true;
 
   // Attach scroll event listener
-  chatContainer.addEventListener('scroll', () => {
-    const { scrollHeight, scrollTop, clientHeight } = chatContainer;
-    // If the container is scrolled to the bottom, enable auto-scrolling
+  document.addEventListener('scroll', () => {
+    const { scrollHeight, scrollTop, clientHeight } = document.documentElement;
+    // If scrolled to the bottom, enable auto-scrolling
     shouldAutoScroll = (scrollHeight - scrollTop - clientHeight) < threshold;
   })
 
   return () => {
     if (shouldAutoScroll) {
-      chatContainer.scrollTop = chatContainer.scrollHeight;
+      document.documentElement.scrollTop = document.documentElement.scrollHeight;
     }
   };
 })();
