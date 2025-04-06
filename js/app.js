@@ -153,6 +153,7 @@ function updateToolParams(toolElement, input) {
     // If we can't parse it yet, show the raw input
     paramsElement.textContent = `Parameters: ${input}`;
   }
+  autoScroll();
 }
 
 // Define system prompt
