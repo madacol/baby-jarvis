@@ -7,6 +7,7 @@ export default {
     properties: {}
   },
   permissions: {
+    autoExecute: true,
     autoContinue: false
   },
   /**

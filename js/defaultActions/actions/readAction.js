@@ -15,7 +15,8 @@ export default {
   ]
 },
 permissions: {
-  autoExecute: true
+  autoExecute: true,
+  autoContinue: true
 },
   action_fn: async ({log, directoryHandle}, params) => {
   try {

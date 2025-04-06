@@ -3,6 +3,9 @@ body {
     max-width: 800px;
     margin: 0 auto;
     padding: 20px;
+    height: 100vh;
+    overflow: auto;
+    box-sizing: border-box;
 }
 
 h1 {
@@ -14,9 +17,7 @@ h1 {
     border: 1px solid #ccc;
     border-radius: 5px;
     padding: 10px;
-    height: 80vh;
     min-height: 400px;
-    overflow-y: auto;
     margin-bottom: 10px;
 }
 

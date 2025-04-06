@@ -1627,11 +1627,11 @@ function Fe(e) {
 async function Ae(e, t) {
   let r2;
   if (e && t === "nodefs") {
-    let { NodeFS: a2 } = await __vitePreload(() => import("./nodefs-BFrVhCle.js"), true ? [] : void 0, import.meta.url);
+    let { NodeFS: a2 } = await __vitePreload(() => import("./nodefs-BFAPeoIz.js"), true ? [] : void 0, import.meta.url);
     r2 = new a2(e);
   } else if (e && t === "idbfs") r2 = new ee(e);
   else if (e && t === "opfs-ahp") {
-    let { OpfsAhpFS: a2 } = await __vitePreload(() => import("./opfs-ahp-Caoeu7AA.js"), true ? [] : void 0, import.meta.url);
+    let { OpfsAhpFS: a2 } = await __vitePreload(() => import("./opfs-ahp-fBC2UjMN.js"), true ? [] : void 0, import.meta.url);
     r2 = new a2(e);
   } else r2 = new te();
   return r2;
@@ -7456,19 +7456,19 @@ async function initializeDirectoryHandle(forceSelect = false) {
   await ensureDefaultActionsExist(directoryHandle2);
   return directoryHandle2;
 }
+const currentSessionDb = new Ue("memory://");
 async function executeAction(actionName, input) {
   const action = await getAction(actionName);
   if (!action) {
     throw new Error(`Action "${actionName}" not found`);
   }
   const context = {
-    // db: new PGlite(`${actionName}.pglite`),
-    db: new Ue(),
+    db: action.permissions?.persistDb ? new Ue(`idb://${actionName}`) : currentSessionDb,
     log,
     directoryHandle,
     getActions
   };
-  if (!action.permissions?.autoExecute) {
+  if (action.permissions?.autoExecute) {
     try {
       return {
         result: await action.action_fn(context, input),
@@ -7814,13 +7814,13 @@ let messageHistory = [];
 const autoScroll = (() => {
   const threshold = 10;
   let shouldAutoScroll = true;
-  chatContainer.addEventListener("scroll", () => {
-    const { scrollHeight, scrollTop, clientHeight } = chatContainer;
+  document.addEventListener("scroll", () => {
+    const { scrollHeight, scrollTop, clientHeight } = document.documentElement;
     shouldAutoScroll = scrollHeight - scrollTop - clientHeight < threshold;
   });
   return () => {
     if (shouldAutoScroll) {
-      chatContainer.scrollTop = chatContainer.scrollHeight;
+      document.documentElement.scrollTop = document.documentElement.scrollHeight;
     }
   };
 })();
@@ -7883,22 +7883,24 @@ function updateToolWithResult(toolElement, result, success) {
 }
 function updateToolParams(toolElement, input) {
   const paramsElement = toolElement.querySelector(".tool-params");
-  if (paramsElement) {
-    try {
-      const params = JSON.parse(input);
-      if (params.code) {
-        paramsElement.textContent = params.code;
-      } else {
-        paramsElement.textContent = JSON.stringify(params, null, 2);
-      }
-    } catch (e) {
-      paramsElement.textContent = `Parameters: ${input}`;
-    }
+  if (!paramsElement) {
+    throw new Error("No params element found");
   }
+  try {
+    const params = JSON.parse(input);
+    if (params.code) {
+      paramsElement.textContent = params.code;
+    } else {
+      paramsElement.textContent = JSON.stringify(params, null, 2);
+    }
+  } catch (e) {
+    paramsElement.textContent = `Parameters: ${input}`;
+  }
+  autoScroll();
 }
-const systemPrompt = `You are Baby Jarvis, a helpful AI assistant that can execute javascript code to satisfy user requests.
+const systemPrompt = `You are Baby Jarvis, a helpful AI assistant that can execute javascript code.
 Use the \`runJavascript\` action for any new task.
-You can run javascript typechecked using JSDoc to help answer questions.
+All Javascript code runs in the browser and is typechecked using JSDoc.
 
 When I ask you to demonstrate something, never create an action immediately. Instead:
 1. First, use \`runJavascript\` to show the implementation
@@ -7907,20 +7909,24 @@ When I ask you to demonstrate something, never create an action immediately. Ins
 IMPORTANT: 
 When writing JavaScript code, you MUST always use arrow functions that receive a context parameter, that context parameter has the following properties:
 - context.log: A function to add messages to the UI for the user to see.
-- context.db: A PGlite database instance, use \`db.sql\`...\`\` to execute queries. Each action has its own database instance.
+- context.db: A PGlite (Postgres in WASM) database instance, use \`db.sql\`...\`\` to execute queries. Each action can be configured to use either:
+  - A shared ephemeral database that is cleared when the session ends (default)
+  - A persistent isolated database that persists across browser refreshes
 - context.directoryHandle: Access a user-selected directory where you can read and write files.
 - context.getActions: A function to get all actions that have been created.
 
 Example of correct code:
 \`\`\`javascript
-({log, db, directoryHandle}, params) => {
+async ({log, db, directoryHandle, getActions}, params) => {
   log('Starting task...');
-  const result = db.sql\`SELECT * FROM users WHERE id = \${params.userId}\`;
-  return directoryHandle.getFileHandle('result.txt', { create: true }).then(fileHandle => {
-    return fileHandle.createWritable().then(writer => {
-      return writer.write(result);
-    });
-  });
+  const {rows: users} = await db.sql\`SELECT * FROM users WHERE id = \${params.userId}\`;
+  const fileHandle = await directoryHandle.getFileHandle('users.txt', { create: true });
+  const writer = await fileHandle.createWritable();
+  await writer.write(users);
+  return {
+    users,
+    actions: await getActions()
+  }
 }
 \`\`\`
 

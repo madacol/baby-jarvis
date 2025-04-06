@@ -13,7 +13,8 @@ export default {
     required: ["code"],
   },
   permissions: {
-    autoExecute: true
+    autoExecute: true,
+    autoContinue: true
   },
   /**
    * Run JavaScript code
