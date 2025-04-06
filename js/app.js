@@ -168,7 +168,7 @@ When I ask you to demonstrate something, never create an action immediately. Ins
 IMPORTANT: 
 When writing JavaScript code, you MUST always use arrow functions that receive a context parameter, that context parameter has the following properties:
 - context.log: A function to add messages to the UI for the user to see.
-- context.db: A PGlite database instance, use \`db.sql\`...\`\` to execute queries. Each action has its own database instance.
+- context.db: A PGlite (Postgres in WASM) database instance, use \`db.sql\`...\`\` to execute queries. Each action has its own database instance.
 - context.directoryHandle: Access a user-selected directory where you can read and write files.
 - context.getActions: A function to get all actions that have been created.
 
