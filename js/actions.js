@@ -24,6 +24,8 @@ import { initializeDirectoryHandle } from './directoryHandleStore.js';
 //     permissions UUID[] REFERENCES permissions(permission_id)
 // )`;
 
+const currentSessionDb = new PGlite("memory://");
+
 /**
  * Execute a custom action
  * @param {string} actionName - The name of the action to execute
@@ -37,8 +39,7 @@ export async function executeAction(actionName, input) {
   }
 
   const context = {
-    // db: new PGlite(`${actionName}.pglite`),
-    db: new PGlite(),
+    db: action.permissions?.persistDb ? new PGlite(`idb://${actionName}`) : currentSessionDb,
     log,
     directoryHandle,
     getActions

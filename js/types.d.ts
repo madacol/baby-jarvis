@@ -31,6 +31,7 @@ type Action = {
     permissions?: {
         autoExecute?: boolean, // Whether to execute the action without user confirmation
         autoContinue?: boolean // Whether to let the LLM continue after the action is executed
+        persistDb?: boolean // Whether to persist the database across sessions (browser refreshes)
     }; // Optional permissions required by the action
 }
 

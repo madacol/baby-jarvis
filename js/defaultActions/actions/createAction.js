@@ -15,6 +15,7 @@ IMPORTANT: This tool should ONLY be executed when the user EXPLICITLY requests t
         properties: {
           autoExecute: { type: "boolean", description: "Whether the action should be automatically run when the user requests it." },
           autoContinue: { type: "boolean", description: "Whether the LLM should continue after the action is executed." },
+          persistDb: { type: "boolean", description: "Whether the action should use a persistent database that persists across browser refreshes." }
         }
       },
     },
