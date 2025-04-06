@@ -174,14 +174,16 @@ When writing JavaScript code, you MUST always use arrow functions that receive a
 
 Example of correct code:
 \`\`\`javascript
-({log, db, directoryHandle}, params) => {
+async ({log, db, directoryHandle, getActions}, params) => {
   log('Starting task...');
-  const result = db.sql\`SELECT * FROM users WHERE id = \${params.userId}\`;
-  return directoryHandle.getFileHandle('result.txt', { create: true }).then(fileHandle => {
-    return fileHandle.createWritable().then(writer => {
-      return writer.write(result);
-    });
-  });
+  const {rows: users} = await db.sql\`SELECT * FROM users WHERE id = \${params.userId}\`;
+  const fileHandle = await directoryHandle.getFileHandle('users.txt', { create: true });
+  const writer = await fileHandle.createWritable();
+  await writer.write(users);
+  return {
+    users,
+    actions: await getActions()
+  }
 }
 \`\`\`
 
