@@ -1,6 +1,29 @@
 import { PGlite } from '../node_modules/@electric-sql/pglite/dist/index.js';
 import { initializeDirectoryHandle } from './directoryHandleStore.js';
 
+// // Setup database
+// sql`CREATE TABLE IF NOT EXISTS apps (
+//     app_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+//     name TEXT NOT NULL UNIQUE,
+//     description TEXT
+// )`;
+
+// sql`CREATE TABLE IF NOT EXISTS permissions (
+//     permission_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+//     name TEXT NOT NULL UNIQUE,
+//     description TEXT
+// )`;
+
+// sql`CREATE TABLE IF NOT EXISTS actions (
+//     action_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+//     app_id UUID REFERENCES apps(app_id),
+//     name TEXT NOT NULL,
+//     description TEXT NOT NULL,
+//     function_code TEXT NOT NULL,
+//     test_code TEXT,
+//     permissions UUID[] REFERENCES permissions(permission_id)
+// )`;
+
 /**
  * Execute a custom action
  * @param {string} actionName - The name of the action to execute
@@ -22,7 +45,7 @@ export async function executeAction(actionName, input) {
   }
 
   // If the action doesn't require confirmation, execute it immediately
-  if (!action.permissions?.autoExecute) {
+  if (action.permissions?.autoExecute) {
     try {
       return {
         result: await action.action_fn(context, input),
