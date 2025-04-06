@@ -5,6 +5,7 @@ body {
     padding: 20px;
     height: 100vh;
     overflow: auto;
+    box-sizing: border-box;
 }
 
 h1 {
