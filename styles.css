@@ -19,20 +19,44 @@ h1 {
     padding: 10px;
     min-height: 400px;
     margin-bottom: 10px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Add a clearfix to handle floated elements properly */
+.chat-container::after {
+    content: "";
+    display: table;
+    clear: both;
 }
 
 .user-message {
-    background-color: #e6f7ff;
-    padding: 8px;
-    border-radius: 5px;
+    background-color: #007bff;
+    color: white;
+    padding: 10px;
+    border-radius: 15px 15px 0 15px;
     margin-bottom: 10px;
+    margin-left: 20%;
+    text-align: right;
+    align-self: flex-end;
+    max-width: 80%;
+    float: right;
+    clear: both;
 }
 
 .ai-message {
     background-color: #f0f0f0;
-    padding: 8px;
-    border-radius: 5px;
+    color: #333;
+    padding: 10px;
+    border-radius: 15px 15px 15px 0;
     margin-bottom: 10px;
+    margin-right: 20%;
+    text-align: left;
+    align-self: flex-start;
+    max-width: 80%;
+    float: left;
+    clear: both;
     white-space: pre-wrap;
 }
 
