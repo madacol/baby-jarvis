@@ -11,3 +11,4 @@
     - [ ] create action to add test cases
 - [ ] add `idempotent` or `re-runnable` permission to actions
 - [ ] apps
+- [ ] Add button to stop AI-generation
