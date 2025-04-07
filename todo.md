@@ -1,7 +1,13 @@
-- [ ] validate actions
-  - [ ] type checking
-  - [ ] testing
 - [ ] artifacts
   allow js runtime to render HTML elements, and re-render previously rendered elements
+- [ ] openActionEditor
+    - [ ] use artifacts to render
+    - [ ] add custom text input for LLM-assisted editing
+- [ ] validate actions
+  - [ ] imports successfully
+  - [ ] type checking
+  - [ ] testing
+    - [ ] create action to add test cases
 -[ ] add `idempotent` or `re-runnable` permission to actions
+-[ ] Add LLM to the context of actions
 -[ ] apps
