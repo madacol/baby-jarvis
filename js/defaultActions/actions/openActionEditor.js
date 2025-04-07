@@ -96,15 +96,9 @@ export default {
 
     // Editor initialization function
     async function initEditor() {
-      // Remove existing Monaco editor if it exists
-      const existingMonaco = document.getElementById('monaco');
-      if (existingMonaco) {
-        existingMonaco.remove();
-      }
 
       // Create container div
       const containerDiv = document.createElement('div');
-      containerDiv.id = 'monaco';
       containerDiv.style.display = 'flex';
       containerDiv.style.flexDirection = 'column';
 
@@ -131,14 +125,13 @@ export default {
 
       // Create Monaco container
       const monacoDiv = document.createElement('div');
-      monacoDiv.style.height = '400px';
       monacoDiv.style.width = '100%';
+      monacoDiv.style.height = "100vh";
       monacoDiv.style.border = '1px solid grey';
 
       // Assemble container
       containerDiv.appendChild(headerDiv);
       containerDiv.appendChild(monacoDiv);
-      document.body.appendChild(containerDiv);
 
       // Navigate to /actions/ folder
       const actionsFolder = await directoryHandle.getDirectoryHandle('actions');
@@ -182,7 +175,7 @@ export default {
       };
 
       log(`Opened file: ${fileName}`);
-      return editor && "success";
+      return containerDiv;
     }
   },
   test_functions: []

@@ -1627,11 +1627,11 @@ function Fe(e) {
 async function Ae(e, t) {
   let r2;
   if (e && t === "nodefs") {
-    let { NodeFS: a2 } = await __vitePreload(() => import("./nodefs-Dq2l6oBv.js"), true ? [] : void 0, import.meta.url);
+    let { NodeFS: a2 } = await __vitePreload(() => import("./nodefs-DnhYLAVc.js"), true ? [] : void 0, import.meta.url);
     r2 = new a2(e);
   } else if (e && t === "idbfs") r2 = new ee(e);
   else if (e && t === "opfs-ahp") {
-    let { OpfsAhpFS: a2 } = await __vitePreload(() => import("./opfs-ahp-DI6O0J7-.js"), true ? [] : void 0, import.meta.url);
+    let { OpfsAhpFS: a2 } = await __vitePreload(() => import("./opfs-ahp-CucucbhV.js"), true ? [] : void 0, import.meta.url);
     r2 = new a2(e);
   } else r2 = new te();
   return r2;
@@ -7913,9 +7913,9 @@ When writing JavaScript code, you MUST always use arrow functions that receive a
 - context.db: A PGlite (Postgres in WASM) database instance, use \`db.sql\`...\`\` to execute queries. Each action can be configured to use either:
   - A shared ephemeral database that is cleared when the session ends (default)
   - A persistent isolated database that persists across browser refreshes
-- context.directoryHandle: Access a user-selected directory where you can read and write files.
+- context.directoryHandle: Access user's directory where you can read and write files.
 - context.getActions: A function to get all actions that have been created.
-And you can return a string, a serializable object, or a HTML element from this function.
+And you can return a string, a JSON-serializable object, or an HTML element which will be rendered in the UI.
 
 Example of correct code:
 \`\`\`javascript
