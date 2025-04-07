@@ -319,7 +319,7 @@ export async function initializeDirectoryHandle(forceSelect = false) {
   
   // If File System Access API is available and we're not already using OPFS, use it
   if (hasFileSystemAccess && !isUsingOPFS) {
-    directoryHandle = await window.showDirectoryPicker();
+    directoryHandle = await window.showDirectoryPicker({mode: 'readwrite'});
   } 
   // Otherwise fall back to OPFS
   else if (hasOPFS) {
