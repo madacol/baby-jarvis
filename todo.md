@@ -1,13 +1,13 @@
-- [ ] artifacts
+- [x] artifacts
   allow js runtime to render HTML elements, and re-render previously rendered elements
+- [ ] Add LLM to the context of actions
 - [ ] openActionEditor
-    - [ ] use artifacts to render
+    - [x] use artifacts to render
     - [ ] add custom text input for LLM-assisted editing
 - [ ] validate actions
   - [ ] imports successfully
   - [ ] type checking
   - [ ] testing
     - [ ] create action to add test cases
--[ ] add `idempotent` or `re-runnable` permission to actions
--[ ] Add LLM to the context of actions
--[ ] apps
+- [ ] add `idempotent` or `re-runnable` permission to actions
+- [ ] apps
