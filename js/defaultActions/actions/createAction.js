@@ -44,7 +44,7 @@ IMPORTANT: This tool should ONLY be executed when the user EXPLICITLY requests t
       const actionModule = `/** @type {Action} */
 export default {
   name: "${name}",
-  description: "${description}",
+  description: \`${description.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`,
   parameters: ${JSON.stringify(parameters, null, 2)},
   action_fn: ${action_function},
   test_functions: ${test_functions ? JSON.stringify(test_functions, null, 2) : '[]'}
