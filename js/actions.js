@@ -30,7 +30,7 @@ const currentSessionDb = new PGlite("memory://");
  * Execute a custom action
  * @param {string} actionName - The name of the action to execute
  * @param {{}} input - The input to pass to the action
- * @returns {Promise<{result: any, permissions: Action['permissions']}>} Result of the action execution
+ * @returns {Promise<{result: ActionResult, permissions: Action['permissions']}>} Result of the action execution
  */
 export async function executeAction(actionName, input) {
   const action = await getAction(actionName);

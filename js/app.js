@@ -113,14 +113,27 @@ function addToolUseToUI(toolUse) {
   return toolElement;
 }
 
-// Update a tool element with results
+/**
+ * Update the tool with a result
+ * @param {HTMLDivElement} toolElement 
+ * @param {ActionResult} result 
+ * @param {boolean} success 
+ */
 function updateToolWithResult(toolElement, result, success) {
   // Find the loading element
   const loadingElement = toolElement.querySelector('.tool-loading');
+
   
   // Replace with result
   if (loadingElement && success) {
-    loadingElement.textContent = `Result: ${JSON.stringify(result, null, 2)}`;
+    if (typeof result === 'string') {
+      loadingElement.textContent = `Result: ${result}`;
+    } else if (result instanceof HTMLElement) {
+      loadingElement.innerHTML = '';
+      loadingElement.appendChild(result);
+    } else {
+      loadingElement.textContent = `Result: ${JSON.stringify(result, null, 2)}`;
+    }
     loadingElement.className = 'tool-result';
   } else if (loadingElement) {
       // Error case
@@ -166,13 +179,14 @@ When I ask you to demonstrate something, never create an action immediately. Ins
 2. Only create an action if I explicitly say 'create an action for this' or 'make this an action'
 
 IMPORTANT: 
-When writing JavaScript code, you MUST always use arrow functions that receive a context parameter, that context parameter has the following properties:
+When writing JavaScript code, you MUST always use arrow functions that receive a context parameter that has the following properties:
 - context.log: A function to add messages to the UI for the user to see.
 - context.db: A PGlite (Postgres in WASM) database instance, use \`db.sql\`...\`\` to execute queries. Each action can be configured to use either:
   - A shared ephemeral database that is cleared when the session ends (default)
   - A persistent isolated database that persists across browser refreshes
 - context.directoryHandle: Access a user-selected directory where you can read and write files.
 - context.getActions: A function to get all actions that have been created.
+And you can return a string, a serializable object, or a HTML element from this function.
 
 Example of correct code:
 \`\`\`javascript

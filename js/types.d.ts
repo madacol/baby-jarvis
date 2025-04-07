@@ -22,11 +22,13 @@ type Context = {
     getActions: () => Promise<Action[]>;
 }
 
+type ActionResult = string | {} | HTMLElement
+
 type Action = {
     name: string; // The name of the action
     description: string; // Description of what the action does
     parameters: {type: 'object', properties: Record<string, any>, required?: string[]}; // a JSON-Schema for the action_fn's parameters
-    action_fn: (context: Context, params: any) => (Promise<any> | any); // The function that implements the action
+    action_fn: (context: Context, params: any) => (Promise<ActionResult> | ActionResult); // The function that implements the action
     test_functions?: ((context: Context, params: any) => (Promise<any> | any))[]; // Optional test functions for the action
     permissions?: {
         autoExecute?: boolean, // Whether to execute the action without user confirmation
