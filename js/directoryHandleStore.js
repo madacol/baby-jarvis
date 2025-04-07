@@ -233,13 +233,7 @@ export async function getSavedDirectoryHandle() {
  */
 export async function ensureDefaultActionsExist(directoryHandle) {
   // Create the actions directory if it doesn't exist
-  let actionsHandle;
-  try {
-    actionsHandle = await directoryHandle.getDirectoryHandle('actions', { create: true });
-  } catch (error) {
-    console.error('Error creating actions directory:', error);
-    return;
-  }
+  const actionsHandle = await directoryHandle.getDirectoryHandle('actions', { create: true });
   
   // Define default action files with their paths
   const defaultActions = [
