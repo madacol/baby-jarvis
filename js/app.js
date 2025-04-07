@@ -184,7 +184,7 @@ When writing JavaScript code, you MUST always use arrow functions that receive a
 - context.db: A PGlite (Postgres in WASM) database instance, use \`db.sql\`...\`\` to execute queries. Each action can be configured to use either:
   - A shared ephemeral database that is cleared when the session ends (default)
   - A persistent isolated database that persists across browser refreshes
-- context.directoryHandle: Access a user-selected directory where you can read and write files.
+- context.directoryHandle: Access user's directory where you can read and write files.
 - context.getActions: A function to get all actions that have been created.
 And you can return a string, a JSON-serializable object, or an HTML element which will be rendered in the UI.
 
