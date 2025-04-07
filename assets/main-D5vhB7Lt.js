@@ -1627,11 +1627,11 @@ function Fe(e) {
 async function Ae(e, t) {
   let r2;
   if (e && t === "nodefs") {
-    let { NodeFS: a2 } = await __vitePreload(() => import("./nodefs-BFAPeoIz.js"), true ? [] : void 0, import.meta.url);
+    let { NodeFS: a2 } = await __vitePreload(() => import("./nodefs-Dq2l6oBv.js"), true ? [] : void 0, import.meta.url);
     r2 = new a2(e);
   } else if (e && t === "idbfs") r2 = new ee(e);
   else if (e && t === "opfs-ahp") {
-    let { OpfsAhpFS: a2 } = await __vitePreload(() => import("./opfs-ahp-fBC2UjMN.js"), true ? [] : void 0, import.meta.url);
+    let { OpfsAhpFS: a2 } = await __vitePreload(() => import("./opfs-ahp-DI6O0J7-.js"), true ? [] : void 0, import.meta.url);
     r2 = new a2(e);
   } else r2 = new te();
   return r2;
@@ -7391,13 +7391,7 @@ async function getSavedDirectoryHandle() {
   }
 }
 async function ensureDefaultActionsExist(directoryHandle2) {
-  let actionsHandle;
-  try {
-    actionsHandle = await directoryHandle2.getDirectoryHandle("actions", { create: true });
-  } catch (error) {
-    console.error("Error creating actions directory:", error);
-    return;
-  }
+  const actionsHandle = await directoryHandle2.getDirectoryHandle("actions", { create: true });
   const defaultActions = [
     "createAction.js",
     "updateAction.js",
@@ -7445,7 +7439,7 @@ async function initializeDirectoryHandle(forceSelect = false) {
   }
   let directoryHandle2;
   if (hasFileSystemAccess && !isUsingOPFS) {
-    directoryHandle2 = await window.showDirectoryPicker();
+    directoryHandle2 = await window.showDirectoryPicker({ mode: "readwrite" });
   } else if (hasOPFS) {
     console.log("Using Origin Private File System as fallback");
     directoryHandle2 = await createOPFSWrapper();
@@ -7873,7 +7867,14 @@ function addToolUseToUI(toolUse) {
 function updateToolWithResult(toolElement, result, success) {
   const loadingElement = toolElement.querySelector(".tool-loading");
   if (loadingElement && success) {
-    loadingElement.textContent = `Result: ${JSON.stringify(result, null, 2)}`;
+    if (typeof result === "string") {
+      loadingElement.textContent = `Result: ${result}`;
+    } else if (result instanceof HTMLElement) {
+      loadingElement.innerHTML = "";
+      loadingElement.appendChild(result);
+    } else {
+      loadingElement.textContent = `Result: ${JSON.stringify(result, null, 2)}`;
+    }
     loadingElement.className = "tool-result";
   } else if (loadingElement) {
     loadingElement.textContent = `Error: ${result || "Unknown error"}`;
@@ -7907,13 +7908,14 @@ When I ask you to demonstrate something, never create an action immediately. Ins
 2. Only create an action if I explicitly say 'create an action for this' or 'make this an action'
 
 IMPORTANT: 
-When writing JavaScript code, you MUST always use arrow functions that receive a context parameter, that context parameter has the following properties:
+When writing JavaScript code, you MUST always use arrow functions that receive a context parameter that has the following properties:
 - context.log: A function to add messages to the UI for the user to see.
 - context.db: A PGlite (Postgres in WASM) database instance, use \`db.sql\`...\`\` to execute queries. Each action can be configured to use either:
   - A shared ephemeral database that is cleared when the session ends (default)
   - A persistent isolated database that persists across browser refreshes
 - context.directoryHandle: Access a user-selected directory where you can read and write files.
 - context.getActions: A function to get all actions that have been created.
+And you can return a string, a serializable object, or a HTML element from this function.
 
 Example of correct code:
 \`\`\`javascript

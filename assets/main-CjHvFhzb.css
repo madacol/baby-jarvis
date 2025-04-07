@@ -150,9 +150,9 @@ pre {
     white-space: pre-wrap;
     font-family: monospace;
     font-size: 14px;
-    overflow-x: auto;
-    max-height: 300px;
-    overflow-y: auto;
+    overflow: auto;
+    max-height: 100vh;
+    box-sizing: border-box;
 }
 
 .tool-error {

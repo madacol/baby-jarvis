@@ -30,16 +30,9 @@ export default {
     // Create the main container
     const container = document.createElement('div');
     container.style.cssText = `
-      position: fixed;
-      top: 0;
-      right: 0;
-      width: 400px;
-      height: 100vh;
       background: white;
       box-shadow: -2px 0 5px rgba(0,0,0,0.1);
-      overflow-y: auto;
       font-family: Arial, sans-serif;
-      z-index: 1000;
       padding: 20px;
       box-sizing: border-box;
     `;
@@ -88,9 +81,6 @@ export default {
       
       container.appendChild(storyElement);
     });
-    
-    // Append to body
-    document.body.appendChild(container);
     
     return container;
   }
