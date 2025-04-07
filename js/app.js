@@ -186,7 +186,7 @@ When writing JavaScript code, you MUST always use arrow functions that receive a
   - A persistent isolated database that persists across browser refreshes
 - context.directoryHandle: Access a user-selected directory where you can read and write files.
 - context.getActions: A function to get all actions that have been created.
-And you can return a string, a serializable object, or a HTML element from this function.
+And you can return a string, a JSON-serializable object, or an HTML element from this function.
 
 Example of correct code:
 \`\`\`javascript
