@@ -1,6 +1,6 @@
 // Type definitions for File System Access API
 interface Window {
-  showDirectoryPicker(): Promise<FileSystemDirectoryHandle>;
+  showDirectoryPicker(options: {mode: 'readwrite'}): Promise<FileSystemDirectoryHandle>;
 }
 
 // Add PermissionState type
