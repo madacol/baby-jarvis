@@ -241,7 +241,7 @@ export async function ensureDefaultActionsExist(directoryHandle) {
     'updateAction.js',
     'readAction.js',
     'runJavascript.js',
-    'openActionEditor.js',
+    'editAction.js',
     'showHackerNews.js',
   ]
 
