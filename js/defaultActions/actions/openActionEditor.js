@@ -100,6 +100,7 @@ export default {
       // Create container div
       const containerDiv = document.createElement('div');
       containerDiv.style.display = 'flex';
+      containerDiv.style.height = '100vh';
       containerDiv.style.flexDirection = 'column';
 
       // Create title and save button container
@@ -125,8 +126,7 @@ export default {
 
       // Create Monaco container
       const monacoDiv = document.createElement('div');
-      monacoDiv.style.width = '100%';
-      monacoDiv.style.height = "100vh";
+      monacoDiv.style.flexGrow = '1';
       monacoDiv.style.border = '1px solid grey';
 
       // Assemble container
