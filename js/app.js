@@ -317,7 +317,8 @@ async function handleStreamEvent(event) {
         const {result, permissions} = await executeAction(toolContent.name, parsedInput);
         shouldLLMInterpretResult = !!permissions?.autoContinue;
         updateToolWithResult(toolContent.element, result, true);
-        messageHistory.push({ role: 'tool', content: [{ type: 'tool_result', tool_use_id: toolContent.id, content: JSON.stringify(result) }] });
+        const content = (result instanceof HTMLElement) ? `Rendered HTML:\n${result.outerHTML}` : JSON.stringify(result);
+        messageHistory.push({ role: 'tool', content: [{ type: 'tool_result', tool_use_id: toolContent.id, content }] });
       } catch (e) {
         shouldLLMInterpretResult = true;
         console.error('Error executing action:', e);
