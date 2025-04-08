@@ -69,18 +69,18 @@ export default {
     // Ensure Monaco resources are loaded
     if (typeof win.monaco === 'undefined') {
       log('Loading Monaco Editor resources...');
-      
-      // Load Monaco loader
-      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs/loader.min.js');
-      
-      // Load Monaco CSS
-      await loadStyle('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs/editor/editor.main.min.css');
+
+      // Load Monaco loader and CSS in parallel
+      await Promise.all([
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/loader.min.js'),
+        loadStyle('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/editor/editor.main.min.css')
+      ]);
 
       // Configure Monaco loader
       return new Promise((resolve, reject) => {
         win.require.config({
           paths: { 
-            vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs' 
+            vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs'
           } 
         });
         
