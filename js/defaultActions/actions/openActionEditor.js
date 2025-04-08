@@ -1,7 +1,7 @@
 /** @type {Action} */
 export default {
-  name: "openActionEditor",
-  description: "Opens a Monaco editor for a specific action file in the actions folder, with save functionality.",
+  name: "editAction",
+  description: "Opens the editor for a specific action file in the actions folder.",
   parameters: {
     type: "object",
     properties: {
