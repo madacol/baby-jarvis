@@ -3,8 +3,9 @@
         "allowJs": true,
         "checkJs": true,
         "lib": ["ES2022", "DOM"],
-        "module": "ES2022",
+        "module": "NodeNext",
         "target": "ES2022",
-        "strictNullChecks": true
+        "strictNullChecks": true,
+        "moduleResolution": "NodeNext"
     }
 }

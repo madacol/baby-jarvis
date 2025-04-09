@@ -1,3 +1,4 @@
+/** @type {import('vite').UserConfig} */
 export default {
     base: '',
     build: {
@@ -7,7 +8,6 @@ export default {
 
         minify: false,
         modulePreload: false,
-        rebaseConfig: false,
 
         // Ensure the default action files are included in the build
         rollupOptions: {
