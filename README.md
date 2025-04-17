@@ -1,104 +1,94 @@
-# Advanced Function Execution System with Claude Tool Integration
+# Baby Jarvis
 
-## Overview
+An AI assistant that can run JavaScript code, query a DB and use/create/edit tools on the fly.
 
-A system that leverages Claude's native tool use functionality to execute JavaScript code through a dedicated `runJavaScript` tool.
+## Implementation
 
-## Current Implementation
+All tools run through a little JS runtime, right there in the browser.
 
-### Tool-Based Execution System
+### Runtime
+
+It passes a context object to all actions, which includes:
+
+- A database (using [PGlite](https://pglite.dev/), Postgres in WASM)
+- File system access (using the File System Access API)
+- Access to calling other registered actions (JS functions)
+
+Actions are stored as JavaScript files in the `actions` directory (Saved in OPFS or in a user-chosen directory) and are loaded dynamically at runtime. Each action exports a default object with metadata and the function to execute.
+
+The runtime handles permissions, user confirmation, and error handling for actions. Actions can be configured to:
+- Run automatically without confirmation
+- Persist database changes across sessions
+- Allow the AI to automatically continue the conversation after execution
+
+### Types
+
+```typescript
+type Action = {
+    name: string;
+    description: string;
+    parameters: {type: 'object', properties: Record<string, any>, required?: string[]};
+    action_fn: (context: Context, params: any) => (Promise<ActionResult> | ActionResult);
+    test_functions?: ((context: Context, params: any) => (Promise<any> | any))[];
+    permissions?: {
+        autoExecute?: boolean, // Skip user confirmation
+        autoContinue?: boolean, // Let LLM continue after execution
+        persistDb?: boolean // Persist DB across sessions
+    };
+}
+```
+
+```typescript
+type Context = {
+    log: (...args: any[]) => void;
+    db: import('@electric-sql/pglite').PGlite;
+    directoryHandle: FileSystemDirectoryHandle;
+    getActions: () => Promise<Action[]>;
+}
+```
+
+### Example Action
 
 ```javascript
-// Example tool definition from app.js
-{
-  name: "runJavaScript",
-  description: "Execute arbitrary JavaScript code and return the result...",
-  input_schema: {
-    type: "object",
-    properties: {
-      code: {
-        type: "string",
-        description: "The JavaScript code to execute as an arrow function..."
-      }
+export default {
+    name: "listDirectory",
+    description: "List files in a directory",
+    parameters: {
+        type: "object",
+        properties: {
+            path: { type: "string", description: "Path to list" }
+        },
+        required: ["path"]
     },
-    required: ["code"]
-  }
+    action_fn: async ({log, directoryHandle}, {path}) => {
+        log('Listing directory:', path);
+        const entries = [];
+        
+        try {
+            const dirHandle = await directoryHandle.getDirectoryHandle(path);
+            for await (const entry of dirHandle.values()) {
+                entries.push({
+                    name: entry.name,
+                    kind: entry.kind
+                });
+            }
+            return entries;
+        } catch (error) {
+            return `Error: ${error.message}`;
+        }
+    },
+    permissions: {
+        autoExecute: true,
+        autoContinue: true
+    }
 }
 ```
 
-### Execution Flow
+# Future Work
 
-1. User sends natural language request
-2. AI determines when code execution is needed
-3. Uses `runJavaScript` tool with code parameter
-4. Execution results are returned to the conversation
-5. AI analyzes the results and decides if it's done or needs to execute more code
-
-### Tool Execution Runtime
-
-The runtime expects that the code returns an arrow function that takes the context as an argument.
-
-```javascript
-// Simplified runtime.js implementation
-async function runJs(code) {
-  const context = {
-    getTool: async (name) => {/* ... */},
-    log: (...args) => {/* ... */},
-    sql: async (query) => {/* ... */},
-    ...
-  };
-
-  const fn = Function(`return ${code}`)();
-  return await fn(context);
-}
-```
-
-## Future Directions (very rough ideas)
-
-### Tool Creation System
-
-```javascript
-/**
- * @param {function} setupFunction - A function that will be passed the context object of the Javascript runtime
- * @param {Array<{ name: string, description: string, input_schema: {}, functionCode: string }>} tools - An array of tools to be created
- */
-async function createTool(setupFunction, tools) {
-    setupFunction(context)
-    // Store tool in database
-    tools.forEach(tool => {
-        toolsDb[tool.name] = tool;
-    });
-}
-```
-
-This function will be a tool that can be used to create other tools.
-
-It will not be passed as a LLM tool directly, but instead will be passed in the context object of the Javascript runtime
-
-### Other Tools
-
-- `createTool`: Define new tools with JavaScript implementations
-- `getTool`: Retrieve and execute existing tools
-- `listTools`: View available tools and their capabilities
-- Versioned tool definitions
-- Tool permission system
-
-### Enhanced Context Management
-
-```javascript
-// Proposed context expansion
-const advancedContext = {
-  log: (...args) => {/* ... */},
-  sql: async (query) => {/* ... */},
-  getTool: async (name) => {/* ... */},
-  createTool: async (setupFunction, tools) => {/* ... */},
-  listTools: async () => {/* ... */},
-  ...
-};
-```
+Ability to create apps with multiple actions that share the same app context.
 
 ## Example Interaction
-
 User: "Create a tool to create and update shopping lists"
 
 Claude:
