@@ -21,6 +21,11 @@ The runtime handles permissions, user confirmation, and error handling for actio
 - Persist database changes across sessions
 - Allow the AI to automatically continue the conversation after execution
 
+The runtime handles 3 different types of results from actions:
+- If **string**, display it as-is below the action call
+- If **object**, pretty-print it with `JSON.stringify(object, null, 2)`
+- If **HTMLElement**, render it
+
 ### Types
 
 ```typescript
@@ -47,6 +52,10 @@ type Context = {
 }
 ```
 
+```typescript
+type ActionResult = string | {} | HTMLElement
+```
+
 ### Example Action
 
 ```javascript
@@ -64,18 +73,14 @@ export default {
         log('Listing directory:', path);
         const entries = [];
         
-        try {
-            const dirHandle = await directoryHandle.getDirectoryHandle(path);
-            for await (const entry of dirHandle.values()) {
-                entries.push({
-                    name: entry.name,
-                    kind: entry.kind
-                });
-            }
-            return entries;
-        } catch (error) {
-            return `Error: ${error.message}`;
+        const dirHandle = await directoryHandle.getDirectoryHandle(path);
+        for await (const entry of dirHandle.values()) {
+            entries.push({
+                name: entry.name,
+                kind: entry.kind
+            });
         }
+        return entries;
     },
     permissions: {
         autoExecute: true,
