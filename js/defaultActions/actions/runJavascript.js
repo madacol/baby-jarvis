@@ -13,11 +13,12 @@ export default /** @type {defineAction} */ (x=>x)({
   },
   permissions: {
     autoExecute: true,
-    autoContinue: true
+    autoContinue: true,
+    useFileSystem: true
   },
   /**
    * Run JavaScript code
-   * @param {Context} context - The context object
+   * @param {Context<PermissionFlags>} context - The context object
    * @param {{code: string}} params - code to execute as an arrow function
    * @returns {Promise<any>} The result of execution
    */

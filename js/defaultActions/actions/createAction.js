@@ -26,7 +26,7 @@ IMPORTANT: This tool should ONLY be executed when the user EXPLICITLY requests t
   },
   /**
    * Create a new action within an app
-   * @param {Context} context - The context object
+   * @param {Context<{useFileSystem: true}>} context - The context object
    * @param {{name: string, description: string, parameters: object, action_function: string, test_functions?: string[]}} params - The action object
    */
   action_fn: async function ({directoryHandle}, {name, description, parameters, action_function, test_functions}) {
