@@ -38,7 +38,8 @@ type Action = {
     permissions?: {
         autoExecute?: boolean, // Skip user confirmation
         autoContinue?: boolean, // Let LLM continue after execution
-        persistDb?: boolean // Persist DB across sessions
+        usePersistentDb?: boolean, // Persist DB across sessions
+        useFileSystem?: boolean // Use the file system to read and write files
     };
 }
 ```
@@ -68,6 +69,9 @@ export default {
             path: { type: "string", description: "Path to list" }
         },
         required: ["path"]
+    },
+    permissions: {
+        useFileSystem: true
     },
     action_fn: async ({log, directoryHandle}, {path}) => {
         log('Listing directory:', path);

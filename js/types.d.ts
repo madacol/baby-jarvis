@@ -17,10 +17,19 @@ type Message = {role: string, content: ContentBlock[]}
 
 type Context = {
     log: (...args: any[]) => void;
+    sessionDb: import('@electric-sql/pglite').PGlite;
     db: import('@electric-sql/pglite').PGlite;
     directoryHandle: FileSystemDirectoryHandle;
     getActions: () => Promise<Action[]>;
 }
+
+type PermissionFlags = {
+    autoExecute?: boolean;
+    autoContinue?: boolean;
+    usePersistentDb?: boolean;
+    useFileSystem?: boolean;
+    // Add more permissions as needed
+};
 
 type ActionResult = string | {} | HTMLElement
 
@@ -30,12 +39,7 @@ type Action = {
     parameters: {type: 'object', properties: Record<string, any>, required?: string[]}; // a JSON-Schema for the action_fn's parameters
     action_fn: (context: Context, params: any) => (Promise<ActionResult> | ActionResult); // The function that implements the action
     test_functions?: ((context: Context, params: any) => (Promise<any> | any))[]; // Optional test functions for the action
-    permissions?: {
-        autoExecute?: boolean, // Whether to execute the action without user confirmation
-        autoContinue?: boolean // Whether to let the LLM continue after the action is executed
-        persistDb?: boolean // Whether to persist the database across sessions (browser refreshes)
-    }; // Optional permissions required by the action
-}
+    permissions?: PermissionFlags;
 
 type AppAction = Action & {
     fileName: string;

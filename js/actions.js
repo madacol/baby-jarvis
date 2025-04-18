@@ -39,11 +39,12 @@ export async function executeAction(actionName, input) {
   }
 
   const context = {
-    db: action.permissions?.persistDb ? new PGlite(`idb://${actionName}`) : currentSessionDb,
+    sessionDb: currentSessionDb,
     log,
-    directoryHandle,
     getActions
   }
+  if (action.permissions?.usePersistentDb) { context.db = new PGlite(`idb://${actionName}`); }
+  if (action.permissions?.useFileSystem) { context.directoryHandle = directoryHandle; }
 
   // If the action doesn't require confirmation, execute it immediately
   if (action.permissions?.autoExecute) {

@@ -46,6 +46,9 @@ Provides a flexible way to evolve custom actions without completely recreating t
     "originalName"
   ]
 },
+  permissions: {
+    useFileSystem: true
+  },
   action_fn: async function modifyAction(context, {originalName, newName, description, parameters, action_function, test_functions}) {
   // Validate input
   if (!originalName) {
