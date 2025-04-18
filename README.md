@@ -4,11 +4,11 @@ An AI assistant that can run JavaScript code, query a DB and use/create/edit too
 
 ## Implementation
 
-All tools run through a little JS runtime, right there in the browser.
+All tools (called actions) are JS functions that get passed a context object and parameters, and what they return is displayed in the chat.
 
 ### Runtime
 
-It passes a context object to all actions, which includes:
+The context object that is passed to all actions, includes:
 
 - A database (using [PGlite](https://pglite.dev/), Postgres in WASM)
 - File system access (using the File System Access API)
