@@ -29,8 +29,7 @@ IMPORTANT: This tool should ONLY be executed when the user EXPLICITLY requests t
    * @param {Context} context - The context object
    * @param {{name: string, description: string, parameters: object, action_function: string, test_functions?: string[]}} params - The action object
    */
-  action_fn: async function (context, {name, description, parameters, action_function, test_functions}) {
-    const directoryHandle = context.directoryHandle;
+  action_fn: async function ({directoryHandle}, {name, description, parameters, action_function, test_functions}) {
     if (!directoryHandle) {
       throw new Error('A directory has not been set for this app');
     }
