@@ -1,5 +1,4 @@
-/** @type {Action} */
-export default {
+export default /** @type {defineAction} */ (x=>x)({
   name: "createAction",
   description: `Creates a new action after having it already tested, working and validated by the user.
 IMPORTANT: This tool should ONLY be executed when the user EXPLICITLY requests to create or make a new action.`,
@@ -30,7 +29,7 @@ IMPORTANT: This tool should ONLY be executed when the user EXPLICITLY requests t
    * @param {Context} context - The context object
    * @param {{name: string, description: string, parameters: object, action_function: string, test_functions?: string[]}} params - The action object
    */
-  action_fn: async function createAction(context, {name, description, parameters, action_function, test_functions}) {
+  action_fn: async function (context, {name, description, parameters, action_function, test_functions}) {
     const directoryHandle = context.directoryHandle;
     if (!directoryHandle) {
       throw new Error('A directory has not been set for this app');
@@ -45,14 +44,14 @@ IMPORTANT: This tool should ONLY be executed when the user EXPLICITLY requests t
       const fileHandle = await actionsHandle.getFileHandle(fileName, { create: true });
       
       // Create the action module content with app_id
-      const actionModule = `/** @type {Action} */
-export default {
+      const actionModule = 
+`export default /** @type {defineAction} */ (x=>x)({
   name: "${name}",
   description: \`${description.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`,
   parameters: ${JSON.stringify(parameters, null, 2)},
   action_fn: ${action_function},
   test_functions: ${test_functions ? JSON.stringify(test_functions, null, 2) : '[]'}
-};
+});
 `;
 
       // Write to the file
@@ -64,4 +63,4 @@ export default {
       throw error;
     }
   }
-};
+});

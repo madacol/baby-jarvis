@@ -15,14 +15,13 @@ type Message = {role: string, content: ContentBlock[]}
 
 /* Actions */
 
-type Context = {
+type BaseContext = {
     log: (...args: any[]) => void;
     sessionDb: import('@electric-sql/pglite').PGlite;
-    db: import('@electric-sql/pglite').PGlite;
-    directoryHandle: FileSystemDirectoryHandle;
     getActions: () => Promise<Action[]>;
 }
 
+// Define permission flags
 type PermissionFlags = {
     autoExecute?: boolean;
     autoContinue?: boolean;
@@ -31,20 +30,28 @@ type PermissionFlags = {
     // Add more permissions as needed
 };
 
+// Build context types dynamically based on permissions
+type Context<P extends PermissionFlags> =
+    BaseContext
+    & (P['usePersistentDb'] extends true ? {db: import('@electric-sql/pglite').PGlite} : {})
+    & (P['useFileSystem'] extends true ? {directoryHandle: FileSystemDirectoryHandle} : {});
+
 type ActionResult = string | {} | HTMLElement
 
-type Action = {
+type Action<P extends PermissionFlags = PermissionFlags> = {
     name: string; // The name of the action
     description: string; // Description of what the action does
     parameters: {type: 'object', properties: Record<string, any>, required?: string[]}; // a JSON-Schema for the action_fn's parameters
-    action_fn: (context: Context, params: any) => (Promise<ActionResult> | ActionResult); // The function that implements the action
-    test_functions?: ((context: Context, params: any) => (Promise<any> | any))[]; // Optional test functions for the action
-    permissions?: PermissionFlags;
+    permissions?: P;
+    action_fn: (context: Context<P>, params: any) => Promise<ActionResult> | ActionResult;
+    test_functions?: Array<(context: Context<P>,params: any) => Promise<boolean> | boolean>;
+};
 
+// AppAction with the same generic permission structure
 type AppAction = Action & {
     fileName: string;
     app_name: string;
-}
+};
 
 type App = {
     app_name: string;
@@ -54,5 +61,6 @@ type App = {
     setup_fn: (()=>Promise<any>)[];
 }
 
-
-    
+function defineAction<P extends PermissionFlags>(action: Action<P>): Action<P> {
+    return action;
+}

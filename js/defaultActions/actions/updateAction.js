@@ -1,5 +1,4 @@
-/** @type {Action} */
-export default {
+export default /** @type {defineAction} */ (x=>x)({
   name: "updateAction",
   description: `Update an existing action by updating its properties.
 
@@ -49,7 +48,7 @@ Provides a flexible way to evolve custom actions without completely recreating t
   permissions: {
     useFileSystem: true
   },
-  action_fn: async function modifyAction(context, {originalName, newName, description, parameters, action_function, test_functions}) {
+  action_fn: async function (context, {originalName, newName, description, parameters, action_function, test_functions}) {
   // Validate input
   if (!originalName) {
     throw new Error('Original action name must be provided');
@@ -128,4 +127,4 @@ export default {
   }
 },
   test_functions: []
-};
+});

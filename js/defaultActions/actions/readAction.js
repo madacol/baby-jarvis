@@ -1,5 +1,4 @@
-/** @type {Action} */
-export default {
+export default /** @type {defineAction} */ (x=>x)({
   name: "readAction",
   description: "Reads the source code of an existing action from the file system. This utility allows users to view the implementation details of any action available in the system by providing the action name. Returns the full source code of the requested action as well as its metadata.",
   parameters: {
@@ -122,4 +121,4 @@ permissions: {
   }
 },
   test_functions: []
-};
+});

@@ -1,5 +1,4 @@
-/** @type {Action} */
-export default {
+export default /** @type {defineAction} */ (x=>x)({
   name: "editAction",
   description: "Opens the editor for a specific action file in the actions folder.",
   parameters: {
@@ -280,4 +279,4 @@ export default {
     }
   },
   test_functions: []
-};
+});
