@@ -1,7 +1,7 @@
 - [ ] Add LLM to the context of actions
 - [ ] openActionEditor
     - [x] use artifacts to render
-    - [ ] diffs
+    - [x] diffs
     - [ ] add custom text input for LLM-assisted editing
 - [ ] validate actions
   - [ ] imports successfully
