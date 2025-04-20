@@ -1,5 +1,4 @@
-/** @type {Action} */
-export default {
+export default /** @type {defineAction} */ (x=>x)({
   name: "showHackerNews",
   description: "Fetches and displays the top Hacker News stories in a sidebar",
   parameters: {
@@ -10,11 +9,7 @@ export default {
     autoExecute: true,
     autoContinue: false
   },
-  /**
-   * Fetches and displays Hacker News stories in a sidebar
-   * @param {Context} context - The context object
-   */
-  action_fn: async function showHackerNews({log}) {
+  action_fn: async function ({log}) {
     // Fetch Hacker News stories
     const topStoriesResponse = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');
     const topStoryIds = await topStoriesResponse.json();
@@ -84,4 +79,4 @@ export default {
     
     return container;
   }
-};
+});

@@ -1627,11 +1627,11 @@ function Fe(e) {
 async function Ae(e, t) {
   let r2;
   if (e && t === "nodefs") {
-    let { NodeFS: a2 } = await __vitePreload(() => import("./nodefs-DnhYLAVc.js"), true ? [] : void 0, import.meta.url);
+    let { NodeFS: a2 } = await __vitePreload(() => import("./nodefs-Di53MzXM.js"), true ? [] : void 0, import.meta.url);
     r2 = new a2(e);
   } else if (e && t === "idbfs") r2 = new ee(e);
   else if (e && t === "opfs-ahp") {
-    let { OpfsAhpFS: a2 } = await __vitePreload(() => import("./opfs-ahp-CucucbhV.js"), true ? [] : void 0, import.meta.url);
+    let { OpfsAhpFS: a2 } = await __vitePreload(() => import("./opfs-ahp--QKZqizS.js"), true ? [] : void 0, import.meta.url);
     r2 = new a2(e);
   } else r2 = new te();
   return r2;
@@ -7397,7 +7397,7 @@ async function ensureDefaultActionsExist(directoryHandle2) {
     "updateAction.js",
     "readAction.js",
     "runJavascript.js",
-    "openActionEditor.js",
+    "editAction.js",
     "showHackerNews.js"
   ];
   for (const actionFile of defaultActions) {
@@ -7457,11 +7457,16 @@ async function executeAction(actionName, input) {
     throw new Error(`Action "${actionName}" not found`);
   }
   const context = {
-    db: action.permissions?.persistDb ? new Ue(`idb://${actionName}`) : currentSessionDb,
+    sessionDb: currentSessionDb,
     log,
-    directoryHandle,
     getActions
   };
+  if (action.permissions?.usePersistentDb) {
+    context.db = new Ue(`idb://${actionName}`);
+  }
+  if (action.permissions?.useFileSystem) {
+    context.directoryHandle = directoryHandle;
+  }
   if (action.permissions?.autoExecute) {
     try {
       return {
@@ -8033,7 +8038,9 @@ async function handleStreamEvent(event) {
         const { result, permissions } = await executeAction(toolContent.name, parsedInput);
         shouldLLMInterpretResult = !!permissions?.autoContinue;
         updateToolWithResult(toolContent.element, result, true);
-        messageHistory.push({ role: "tool", content: [{ type: "tool_result", tool_use_id: toolContent.id, content: JSON.stringify(result) }] });
+        const content = result instanceof HTMLElement ? `Rendered HTML:
+${result.outerHTML}` : JSON.stringify(result);
+        messageHistory.push({ role: "tool", content: [{ type: "tool_result", tool_use_id: toolContent.id, content }] });
       } catch (e) {
         shouldLLMInterpretResult = true;
         console.error("Error executing action:", e);

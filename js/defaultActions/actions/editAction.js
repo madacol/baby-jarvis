@@ -1,7 +1,6 @@
-/** @type {Action} */
-export default {
-  name: "openActionEditor",
-  description: "Opens a Monaco editor for a specific action file in the actions folder, with save functionality.",
+export default /** @type {defineAction} */ (x=>x)({
+  name: "editAction",
+  description: "Edit any action in a rich code editor.",
   parameters: {
     type: "object",
     properties: {
@@ -16,16 +15,13 @@ export default {
   },
   permissions: {
     autoExecute: true,
-    autoContinue: false
+    autoContinue: false,
+    useFileSystem: true,
   },
   action_fn: async ({log, directoryHandle}, {actionName}) => {
-    // Validate directoryHandle
-    if (!directoryHandle) {
-      throw new Error('No directory handle available');
-    }
 
-    // Function to load a script
     /**
+     * Function to load a script
      * @param {string} src
      * @returns {Promise<void>}
      */
@@ -43,8 +39,8 @@ export default {
       });
     };
 
-    // Function to load a stylesheet
     /**
+     * Function to load a stylesheet
      * @param {string} href
      * @returns {Promise<void>}
      */
@@ -69,18 +65,18 @@ export default {
     // Ensure Monaco resources are loaded
     if (typeof win.monaco === 'undefined') {
       log('Loading Monaco Editor resources...');
-      
-      // Load Monaco loader
-      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs/loader.min.js');
-      
-      // Load Monaco CSS
-      await loadStyle('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs/editor/editor.main.min.css');
+
+      // Load Monaco loader and CSS in parallel
+      await Promise.all([
+        loadScript('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/loader.min.js'),
+        loadStyle('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/editor/editor.main.min.css')
+      ]);
 
       // Configure Monaco loader
       return new Promise((resolve, reject) => {
         win.require.config({
           paths: { 
-            vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.0/min/vs' 
+            vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs'
           } 
         });
         
@@ -100,6 +96,7 @@ export default {
       // Create container div
       const containerDiv = document.createElement('div');
       containerDiv.style.display = 'flex';
+      containerDiv.style.height = '100vh';
       containerDiv.style.flexDirection = 'column';
 
       // Create title and save button container
@@ -113,6 +110,22 @@ export default {
       const titleSpan = document.createElement('span');
       headerDiv.appendChild(titleSpan);
 
+      // Create button container
+      const buttonContainer = document.createElement('div');
+      buttonContainer.style.display = 'flex';
+      buttonContainer.style.gap = '10px';
+      headerDiv.appendChild(buttonContainer);
+
+      // Create show diff button
+      const diffButton = document.createElement('button');
+      diffButton.textContent = 'Show Diff';
+      diffButton.style.backgroundColor = '#2196F3';
+      diffButton.style.color = 'white';
+      diffButton.style.border = 'none';
+      diffButton.style.padding = '10px 20px';
+      diffButton.style.cursor = 'pointer';
+      buttonContainer.appendChild(diffButton);
+
       // Create save button
       const saveButton = document.createElement('button');
       saveButton.textContent = 'Save';
@@ -121,12 +134,11 @@ export default {
       saveButton.style.border = 'none';
       saveButton.style.padding = '10px 20px';
       saveButton.style.cursor = 'pointer';
-      headerDiv.appendChild(saveButton);
+      buttonContainer.appendChild(saveButton);
 
       // Create Monaco container
       const monacoDiv = document.createElement('div');
-      monacoDiv.style.width = '100%';
-      monacoDiv.style.height = "100vh";
+      monacoDiv.style.flexGrow = '1';
       monacoDiv.style.border = '1px solid grey';
 
       // Assemble container
@@ -145,6 +157,9 @@ export default {
       // Read the file
       const file = await selectedFile.getFile();
       const fileContent = await file.text();
+      
+      // Store original content for diff comparison
+      let originalContent = fileContent;
 
       // Update title
       titleSpan.textContent = `Editing: ${fileName}`;
@@ -171,7 +186,88 @@ export default {
         // Close the stream
         await writable.close();
 
+        // Update original content after save
+        originalContent = content;
+
         log(`File ${fileName} saved successfully!`);
+      };
+
+      // Diff view functionality
+      diffButton.onclick = () => {
+        // Create diff modal
+        const diffModal = document.createElement('div');
+        diffModal.style.position = 'fixed';
+        diffModal.style.top = '0';
+        diffModal.style.left = '0';
+        diffModal.style.width = '100%';
+        diffModal.style.height = '100%';
+        diffModal.style.backgroundColor = 'rgba(0,0,0,0.7)';
+        diffModal.style.zIndex = '1000';
+        diffModal.style.display = 'flex';
+        diffModal.style.flexDirection = 'column';
+        
+        // Create modal header
+        const modalHeader = document.createElement('div');
+        modalHeader.style.display = 'flex';
+        modalHeader.style.justifyContent = 'space-between';
+        modalHeader.style.padding = '10px';
+        modalHeader.style.backgroundColor = '#333';
+        modalHeader.style.color = 'white';
+        
+        // Create title
+        const modalTitle = document.createElement('span');
+        modalTitle.textContent = 'Diff View: Current vs Saved';
+        modalHeader.appendChild(modalTitle);
+        
+        // Create close button
+        const closeButton = document.createElement('button');
+        closeButton.textContent = 'Close';
+        closeButton.style.backgroundColor = '#f44336';
+        closeButton.style.color = 'white';
+        closeButton.style.border = 'none';
+        closeButton.style.padding = '5px 10px';
+        closeButton.style.cursor = 'pointer';
+        closeButton.onclick = () => document.body.removeChild(diffModal);
+        modalHeader.appendChild(closeButton);
+        
+        // Create diff container
+        const diffContainer = document.createElement('div');
+        diffContainer.style.flex = '1';
+        diffContainer.style.overflow = 'auto';
+        
+        // Assemble modal
+        diffModal.appendChild(modalHeader);
+        diffModal.appendChild(diffContainer);
+        document.body.appendChild(diffModal);
+        
+        // Create models for diff editor
+        const originalModel = win.monaco.editor.createModel(
+          originalContent,
+          'javascript'
+        );
+        
+        const modifiedModel = win.monaco.editor.createModel(
+          editor.getValue(),
+          'javascript'
+        );
+        
+        // Create diff editor
+        const diffEditor = win.monaco.editor.createDiffEditor(
+          diffContainer,
+          {
+            enableSplitViewResizing: true,
+            renderSideBySide: true,
+            readOnly: true,
+            theme: 'vs-dark',
+            automaticLayout: true
+          }
+        );
+        
+        // Set the models
+        diffEditor.setModel({
+          original: originalModel,
+          modified: modifiedModel
+        });
       };
 
       log(`Opened file: ${fileName}`);
@@ -179,4 +275,4 @@ export default {
     }
   },
   test_functions: []
-};
+});

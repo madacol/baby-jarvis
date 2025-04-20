@@ -1,5 +1,4 @@
-/** @type {Action} */
-export default {
+export default /** @type {defineAction} */ (x=>x)({
   name: "runJavascript",
   description: "Use this to execute any JavaScript code and show results. The code must be an arrow function that receives a context object.",
   parameters: {
@@ -14,15 +13,16 @@ export default {
   },
   permissions: {
     autoExecute: true,
-    autoContinue: true
+    autoContinue: true,
+    useFileSystem: true
   },
   /**
    * Run JavaScript code
-   * @param {Context} context - The context object
+   * @param {Context<PermissionFlags>} context - The context object
    * @param {{code: string}} params - code to execute as an arrow function
    * @returns {Promise<any>} The result of execution
    */
-  action_fn: async function runJs(context, {code}) {
+  action_fn: async function (context, {code}) {
     console.log('Executing JavaScript code:', code);
   
     let fn;
@@ -44,4 +44,4 @@ export default {
       throw error;
     }
   }
-}
+});
