@@ -1,6 +1,6 @@
 export default /** @type {defineAction} */ (x=>x)({
   name: "editAction",
-  description: "Opens the editor for a specific action file in the actions folder.",
+  description: "Edit any action in a rich code editor.",
   parameters: {
     type: "object",
     properties: {
@@ -19,13 +19,9 @@ export default /** @type {defineAction} */ (x=>x)({
     useFileSystem: true,
   },
   action_fn: async ({log, directoryHandle}, {actionName}) => {
-    // Validate directoryHandle
-    if (!directoryHandle) {
-      throw new Error('No directory handle available');
-    }
 
-    // Function to load a script
     /**
+     * Function to load a script
      * @param {string} src
      * @returns {Promise<void>}
      */
@@ -43,8 +39,8 @@ export default /** @type {defineAction} */ (x=>x)({
       });
     };
 
-    // Function to load a stylesheet
     /**
+     * Function to load a stylesheet
      * @param {string} href
      * @returns {Promise<void>}
      */
